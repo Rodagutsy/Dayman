@@ -11,6 +11,14 @@ function ensureResumed() {
   if (c.state === 'suspended') c.resume();
 }
 
+function unlockCtx() {
+  const c = ctx();
+  if (c.state === 'suspended') c.resume();
+}
+
+document.addEventListener('pointerdown', unlockCtx, { once: true });
+document.addEventListener('touchstart', unlockCtx, { once: true });
+
 function tone(freq, dur, type, vol, detune) {
   const c = ctx();
   const osc = c.createOscillator();
