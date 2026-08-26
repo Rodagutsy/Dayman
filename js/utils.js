@@ -13,6 +13,15 @@ export var LS = {
   }
 };
 
+export function clearAppData() {
+  var keys = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && k.indexOf('dayspeak.') === 0) keys.push(k);
+  }
+  keys.forEach(function (k) { localStorage.removeItem(k); });
+}
+
 var TEST = /(?:\?|&)test=1/.test(location.search);
 
 var warp = 0;

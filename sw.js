@@ -1,5 +1,5 @@
 /* Dayman service worker — cache the shell, serve offline. */
-var CACHE = 'dayman-v1';
+var CACHE = 'dayman-v2';
 var SHELL = [
   './',
   './index.html',

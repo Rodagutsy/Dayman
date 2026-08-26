@@ -92,9 +92,12 @@ export async function deleteAccount() {
   if (!sb || !_user) return { error: 'Not signed in' };
   try {
     var uid = _user.id;
+    // Delete server-side data (RLS policies allow this)
     await sb.from('user_data').delete().eq('user_id', uid);
     await sb.from('profiles').delete().eq('id', uid);
+    // Note: auth.users deletion requires a server-side Edge Function.
+    // The auth account (email + password hash) remains until a server endpoint removes it.
     await signOut();
-    return { ok: true };
+    return { ok: true, note: 'Server data deleted. Email account remains — contact support to fully delete.' };
   } catch (e) { return { error: e.message || 'Delete failed' }; }
 }

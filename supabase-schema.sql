@@ -33,6 +33,10 @@ create policy "Users can insert own profile"
   on profiles for insert
   with check (auth.uid() = id);
 
+create policy "Users can delete own profile"
+  on profiles for delete
+  using (auth.uid() = id);
+
 -- User data: users can only read/write their own
 create policy "Users can view own data"
   on user_data for select

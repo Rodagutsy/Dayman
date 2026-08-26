@@ -1,6 +1,6 @@
 /* Dayman — entry point: wiring, resume, test hooks, service worker. */
 
-import { $, $$, LS, now, today, setWarp, getWarp, toast } from './utils.js';
+import { $, $$, LS, now, today, setWarp, getWarp, toast, clearAppData } from './utils.js';
 import { plan, getSession, setSession, history } from './state.js';
 import { parseTasks, parseReply } from './parsing.js';
 import { speak, unlockAudio, listen, speechLog, getMuted, setMuted } from './speech.js';
@@ -284,7 +284,7 @@ $('#btn-settings-account').addEventListener('click', function () {
 });
 $('#btn-settings-clear').addEventListener('click', function () {
   if (!confirm('Clear all data? This removes your history, badges, and settings on this device.')) return;
-  try { localStorage.clear(); } catch (e) {}
+  try { clearAppData(); } catch (e) {}
   toast('All data cleared');
   renderLevelBadge();
   goPlan();
@@ -521,8 +521,8 @@ function initProfile() {
     if (!confirm('Really delete everything?')) return;
     var res = await deleteAccount();
     if (res.error) { toast('Delete failed: ' + res.error); return; }
-    try { localStorage.clear(); } catch (e) {}
-    toast('Account deleted');
+    clearAppData();
+    toast('Server data deleted. Email account remains — contact support to fully remove.');
     goPlan();
   });
 }
@@ -602,7 +602,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ---- test hooks ----
+// ---- test hooks (only when ?test=1) ----
+if (/(?:\?|&)test=1/.test(location.search)) {
 window.__ds = {
   speechLog: speechLog,
   warp: function (ms) { setWarp(ms); tick(); return getWarp(); },
@@ -668,5 +669,6 @@ window.__ds = {
     renderLevelBadge();
     return Object.keys(h).length;
   },
-  reset: function () { try { localStorage.clear(); } catch (e) {} }
+  reset: function () { try { clearAppData(); } catch (e) {} }
 };
+}
