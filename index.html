@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dayspeak</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#F7F7F7">
+<meta name="description" content="Speak your day, get a focused plan, and let the coach keep time.">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dayspeak">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ PLAN ============ -->
+  <section class="screen" id="screen-plan" data-screen="plan">
+    <header class="top">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 24 24" fill="none" aria-label="Dayspeak">
+          <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 6.5v5.6l3.6 2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Dayspeak</span>
+      </div>
+      <span>&nbsp;</span>
+    </header>
+
+    <div class="body">
+      <!-- compact greeting + badge row -->
+      <div class="plan-header">
+        <h1 class="q"><span class="greeting" id="greeting">Good morning</span> <span class="greeting-wave">&#x1F44B;</span></h1>
+        <button class="lvl-badge" id="lvl-badge" type="button">
+          <span class="lvl-badge-text" id="lvl-badge-text">Level 1 · Spark</span>
+          <span class="lvl-badge-streak" id="lvl-badge-streak">no streak yet</span>
+        </button>
+      </div>
+
+      <!-- Wizard Card 1: Tasks (always visible) -->
+      <div class="wizard-card">
+        <div class="task-area">
+          <textarea id="tasks-input" rows="3" placeholder="What are you working on today?"></textarea>
+          <button class="mic-inline" id="btn-mic-plan" aria-label="Dictate your tasks">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M5.5 12a6.5 6.5 0 0 0 13 0M12 18.5V21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <span id="mic-state" class="mic-listen-state hidden">Listening...</span>
+        <p class="mic-live-text hidden" id="mic-live"></p>
+        <div class="hints" id="task-hints"></div>
+      </div>
+
+      <!-- Wizard Card 2: Time (reveals after tasks) -->
+      <div class="wizard-card reveal" id="reveal-time">
+        <h2 class="label">How long do you have today?</h2>
+        <div class="time-chips" id="time-chips"></div>
+        <div class="time-slider-row">
+          <input type="range" id="budget-slider" min="15" max="720" step="5" value="180">
+          <span class="time-display" id="time-display">3h 00m</span>
+        </div>
+      </div>
+
+      <!-- Wizard Card 3: Technique (reveals after time) -->
+      <div class="wizard-card reveal" id="reveal-tech">
+        <h2 class="label">How do you want to work?</h2>
+        <div class="tech-list" id="tech-list"></div>
+        <div class="custom-row hidden" id="tech-custom">
+          <input type="number" id="tech-focus" inputmode="numeric" min="5" max="180" step="5" value="30">
+          <span class="unit">focus</span>
+          <input type="number" id="tech-break" inputmode="numeric" min="0" max="60" step="1" value="7">
+          <span class="unit">break</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="dock">
+      <button class="btn primary cta-dim" id="btn-map">Plan my day</button>
+    </footer>
+  </section>
+
+  <!-- ============ SCHEDULE ============ -->
+  <section class="screen hidden" id="screen-schedule" data-screen="schedule">
+    <header class="top">
+      <button class="link" id="btn-back-plan">Back</button>
+      <div class="top-title">Your day</div>
+      <span class="link ghost">&nbsp;</span>
+    </header>
+    <div class="body">
+      <div class="budget-bar" id="budget-bar">
+        <div class="budget-line"><span id="budget-used">0 min</span><span id="budget-total">of 180 min</span></div>
+        <div class="track"><div class="fill" id="budget-fill"></div></div>
+        <p class="warn hidden" id="budget-warn"></p>
+      </div>
+      <div id="task-editor"></div>
+      <h2 class="label">Timeline</h2>
+      <div id="timeline"></div>
+    </div>
+    <footer class="dock">
+      <button class="btn primary" id="btn-start">Start day</button>
+    </footer>
+  </section>
+
+  <!-- ============ SESSION ============ -->
+  <section class="screen hidden session" id="screen-session" data-screen="session">
+    <header class="top">
+      <button class="link" id="btn-quit">End day</button>
+      <div class="top-title" id="block-count">Block 1 of 6</div>
+      <button class="link" id="btn-mute" aria-pressed="false">Voice on</button>
+    </header>
+    <div class="body center">
+      <p class="kicker" id="block-kind">Focus</p>
+      <h1 class="task-name" id="cur-task">&mdash;</h1>
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-bg" cx="100" cy="100" r="88"/>
+          <circle class="ring-fg" id="ring-fg" cx="100" cy="100" r="88"/>
+        </svg>
+        <div class="count" id="countdown">25:00</div>
+      </div>
+      <p class="next" id="next-up">Next: &mdash;</p>
+
+      <div class="decision hidden" id="decision">
+        <p class="dq" id="decision-q">Time's up. Are you done?</p>
+        <div class="auto hidden" id="dec-auto">
+          <div class="auto-track"><div class="auto-fill" id="dec-auto-fill"></div></div>
+          <p class="auto-text" id="dec-auto-text">Done in 30s</p>
+        </div>
+        <div class="dgrid">
+          <button class="btn primary" data-dec="done">Done</button>
+          <button class="btn" data-dec="5">+5 min</button>
+        </div>
+        <button class="dcustom-toggle" id="btn-dec-custom-toggle">More options</button>
+        <div class="dcustom" id="dcustom">
+          <button class="mic sm" id="btn-mic-dec" aria-label="Answer with your voice">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M5.5 12a6.5 6.5 0 0 0 13 0M12 18.5V21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <input type="number" id="dec-min" inputmode="numeric" min="1" max="120" placeholder="min">
+          <button class="btn" id="dec-add">Add</button>
+        </div>
+        <p class="mic-live" id="dec-live"></p>
+      </div>
+    </div>
+    <footer class="dock grid4" id="session-dock">
+      <button class="btn" id="btn-pause">Pause</button>
+      <button class="btn adv" id="btn-skip">Skip</button>
+      <button class="btn adv" id="btn-more">More time</button>
+      <button class="btn primary" id="btn-done">Done</button>
+    </footer>
+  </section>
+
+  <!-- ============ RECAP ============ -->
+  <section class="screen hidden" id="screen-recap" data-screen="recap">
+    <header class="top">
+      <div class="top-title">Recap</div>
+      <button class="link" id="btn-recap-home">New day</button>
+    </header>
+    <div class="body">
+      <div class="stat-row">
+        <div class="stat"><b id="r-focus">0m</b><i>focused</i></div>
+        <div class="stat"><b id="r-ext">0</b><i>overruns</i></div>
+        <div class="stat"><b id="r-tasks">0</b><i>tasks</i></div>
+      </div>
+
+      <div class="xp-card" id="recap-xp">
+        <div class="xp-head"><span id="rx-gain">+0 XP today</span><span id="rx-level">Level 1 &middot; Spark</span></div>
+        <div class="track sm"><div class="fill" id="rx-fill"></div></div>
+        <p class="xp-sub" id="rx-sub">0 XP total</p>
+        <ul class="xp-break" id="rx-break"></ul>
+      </div>
+
+      <div id="recap-unlocks"></div>
+      <div id="recap-list"></div>
+      <div class="obs" id="recap-obs"></div>
+    </div>
+    <footer class="dock">
+      <button class="btn primary" id="btn-recap-done">Done for today</button>
+    </footer>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="screen hidden" id="screen-progress" data-screen="progress">
+    <header class="top">
+      <div class="top-title">Progress</div>
+      <span>&nbsp;</span>
+      <span>&nbsp;</span>
+    </header>
+    <div class="body">
+      <div class="seg" id="prog-seg" role="tablist">
+        <button class="seg-btn is-on" data-tab="day" role="tab" aria-selected="true">Day</button>
+        <button class="seg-btn" data-tab="week" role="tab" aria-selected="false">Week</button>
+        <button class="seg-btn" data-tab="month" role="tab" aria-selected="false">Month</button>
+      </div>
+      <div id="prog-body"></div>
+    </div>
+  </section>
+
+  <!-- ============ REWARDS ============ -->
+  <section class="screen hidden" id="screen-rewards" data-screen="rewards">
+    <header class="top">
+      <div class="top-title">Rewards</div>
+      <span>&nbsp;</span>
+      <span>&nbsp;</span>
+    </header>
+    <div class="body">
+      <h2 class="label">Badges</h2>
+      <div class="badges" id="badge-grid"></div>
+      <div class="rank" id="rank-card"></div>
+      <button class="link wide" id="btn-full-history">Full history and pace</button>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen hidden" id="screen-history" data-screen="history">
+    <header class="top">
+      <button class="link" id="btn-hist-back">Back</button>
+      <div class="top-title">History</div>
+      <span class="link ghost">&nbsp;</span>
+    </header>
+    <div class="body">
+      <div id="hist-averages"></div>
+      <div id="hist-days"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen hidden" id="screen-settings" data-screen="settings">
+    <header class="top">
+      <div class="top-title">Settings</div>
+      <span>&nbsp;</span>
+      <span>&nbsp;</span>
+    </header>
+    <div class="body">
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Voice Coach</span>
+            <span class="settings-desc">Speak timing cues and decisions aloud</span>
+          </div>
+          <button class="toggle" id="btn-settings-voice" role="switch" aria-checked="true">
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row" id="settings-account-row">
+          <div class="settings-info">
+            <span class="settings-label">Account</span>
+            <span class="settings-desc" id="settings-account-email">Not signed in</span>
+          </div>
+          <button class="settings-action" id="btn-settings-account">Sign in</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Clear all data</span>
+            <span class="settings-desc">Remove history, badges, and settings from this device</span>
+          </div>
+          <button class="settings-action danger" id="btn-settings-clear">Clear</button>
+        </div>
+      </div>
+
+      <p class="settings-footer">Dayspeak v1.0 &middot; Your data stays on this device</p>
+    </div>
+  </section>
+
+  <!-- ============ SIGN IN ============ -->
+  <section class="screen hidden" id="screen-signin" data-screen="signin">
+    <header class="top">
+      <div class="top-title">Save your progress</div>
+      <button class="link" id="btn-signin-skip-top">Not now</button>
+    </header>
+    <div class="body">
+      <h1 class="q">Keep your streak, badges and rank safe.</h1>
+      <p class="sub">Add an email and your days, XP, levels, and badges travel with you across devices.</p>
+      <div class="si-stats" id="si-stats"></div>
+      <label class="label" for="signin-email">Email</label>
+      <input type="email" id="signin-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+      <p class="si-err hidden" id="signin-err">That doesn't look like an email &mdash; try again.</p>
+      <p class="si-note">Saved on this device only for now. Sync is coming &mdash; nothing is sent anywhere yet.</p>
+    </div>
+    <footer class="dock">
+      <button class="btn primary" id="btn-signin-go">Continue</button>
+      <button class="link center-link" id="btn-signin-skip">Not now</button>
+    </footer>
+  </section>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- celebration elements -->
+  <div class="scanlines hidden" id="scanlines"></div>
+  <canvas class="confetti-canvas hidden" id="confetti-canvas"></canvas>
+  <div class="level-up-flash hidden" id="level-up-flash"><span class="lu-text" id="lu-text">LEVEL UP!</span></div>
+  <div id="xp-float-container"></div>
+
+</div>
+
+<!-- ============ BOTTOM NAV ============ -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="nav-tab is-on" data-screen="plan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+    <span>Plan</span>
+  </button>
+  <button class="nav-tab" data-screen="progress">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <span>Progress</span>
+  </button>
+  <button class="nav-tab" data-screen="rewards">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+    </svg>
+    <span>Rewards</span>
+  </button>
+  <button class="nav-tab" data-screen="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<script type="module" src="js/app.js"></script></body>
+</html>
