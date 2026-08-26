@@ -1,4 +1,4 @@
-/* Dayspeak — session engine: timer, blocks, decisions, visibilitychange. */
+/* Dayman — session engine: timer, blocks, decisions, visibilitychange. */
 
 import { LS, now, today, toast, mmss, human } from './utils.js';
 import { plan, getSession, setSession, getDecRec, setDecRec } from './state.js';

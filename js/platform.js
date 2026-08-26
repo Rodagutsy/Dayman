@@ -1,4 +1,4 @@
-/* Dayspeak — platform APIs: wake lock + notifications. */
+/* Dayman — platform APIs: wake lock + notifications. */
 
 var wakeLock = null;
 

@@ -1,4 +1,4 @@
-/* Dayspeak — Web Speech API: synthesis + recognition. */
+/* Dayman — Web Speech API: synthesis + recognition. */
 
 import { LS, now } from './utils.js';
 

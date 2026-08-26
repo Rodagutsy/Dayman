@@ -1,4 +1,4 @@
-/* Dayspeak — shared utilities. Pure functions, zero imports. */
+/* Dayman — shared utilities. Pure functions, zero imports. */
 
 export var $ = function (s, r) { return (r || document).querySelector(s); };
 export var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };

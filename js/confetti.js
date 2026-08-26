@@ -1,4 +1,4 @@
-/* confetti.js — Canvas-based confetti burst */
+/* Dayman — Canvas-based confetti burst */
 const canvas = document.getElementById('confetti-canvas');
 const container = document.getElementById('xp-float-container');
 let ctx = null;

@@ -1,4 +1,4 @@
-/* Dayspeak — shared mutable state + decRec lifted from wiring. */
+/* Dayman — shared mutable state + decRec lifted from wiring. */
 
 import { LS } from './utils.js';
 

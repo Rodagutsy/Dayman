@@ -1,4 +1,4 @@
-/* Dayspeak — gamification: XP, levels, badges, streaks. */
+/* Dayman — gamification: XP, levels, badges, streaks. */
 
 import { pad, now, today, LS } from './utils.js';
 import { history } from './state.js';

@@ -1,4 +1,4 @@
-/* Dayspeak — task and reply parsing. Pure functions, zero imports. */
+/* Dayman — task and reply parsing. Pure functions, zero imports. */
 
 export function parseTasks(raw) {
   if (!raw) return [];

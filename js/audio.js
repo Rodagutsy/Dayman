@@ -1,4 +1,4 @@
-/* audio.js — Web Audio API synth sounds (no external files) */
+/* Dayman — Web Audio API synth sounds (no external files) */
 let _ctx = null;
 
 function ctx() {
@@ -80,4 +80,18 @@ export function allDone() {
   ensureResumed();
   fanfare8bit();
   setTimeout(() => chime(), 600);
+}
+
+export function splashNote(index) {
+  ensureResumed();
+  const notes = [523, 587, 659, 740, 831, 880, 988, 1047];
+  const freq = notes[index % notes.length];
+  note(freq, 0, 0.18, 'triangle', 0.10);
+}
+
+export function splashFinal() {
+  ensureResumed();
+  note(1047, 0, 0.4, 'sine', 0.08);
+  note(1318, 0.05, 0.35, 'sine', 0.06);
+  note(1568, 0.10, 0.30, 'sine', 0.05);
 }

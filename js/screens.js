@@ -1,4 +1,4 @@
-/* Dayspeak — all screen rendering, shared UI helpers, buildBlocks. */
+/* Dayman — all screen rendering, shared UI helpers, buildBlocks. */
 
 import { $, $$, LS, now, today, prettyDate, human, clockOf, uid } from './utils.js';
 import { plan, getSession, setSession, history, averages } from './state.js';

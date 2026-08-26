@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Dayspeak</title>
+<title>Dayman</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#F7F7F7">
 <meta name="description" content="Speak your day, get a focused plan, and let the coach keep time.">
@@ -10,36 +10,45 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Dayspeak">
+<meta name="apple-mobile-web-app-title" content="Dayman">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- splash screen -->
+<div class="splash" id="splash">
+  <div class="splash-inner">
+    <div class="splash-text" id="splash-text"></div>
+    <p class="splash-tagline" id="splash-tagline">Speak your day.</p>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- ============ PLAN ============ -->
   <section class="screen" id="screen-plan" data-screen="plan">
     <header class="top">
       <div class="brand">
-        <svg class="mark" viewBox="0 0 24 24" fill="none" aria-label="Dayspeak">
-          <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M12 6.5v5.6l3.6 2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <span>Dayspeak</span>
+        <span class="brand-name">Dayman</span>
       </div>
       <span>&nbsp;</span>
     </header>
 
     <div class="body">
-      <!-- compact greeting + badge row -->
-      <div class="plan-header">
-        <h1 class="q"><span class="greeting" id="greeting">Good morning</span> <span class="greeting-wave">&#x1F44B;</span></h1>
+      <!-- user row: avatar+name left, streak pill right -->
+      <div class="plan-user-row">
+        <div class="plan-user-left">
+          <div class="plan-avatar" id="plan-avatar">Y</div>
+          <span class="plan-username" id="plan-username">You</span>
+        </div>
         <button class="lvl-badge" id="lvl-badge" type="button">
           <span class="lvl-badge-text" id="lvl-badge-text">Level 1 · Spark</span>
           <span class="lvl-badge-streak" id="lvl-badge-streak">no streak yet</span>
         </button>
       </div>
+      <!-- greeting below -->
+      <h1 class="plan-greeting"><span class="greeting" id="greeting">Good morning</span> <span class="greeting-wave">&#x1F44B;</span></h1>
 
       <!-- Wizard Card 1: Tasks (always visible) -->
       <div class="wizard-card">
@@ -272,7 +281,7 @@
         </div>
       </div>
 
-      <p class="settings-footer">Dayspeak v1.0 &middot; Your data stays on this device</p>
+      <p class="settings-footer">Dayman v1.0 &middot; Your data stays on this device</p>
     </div>
   </section>
 

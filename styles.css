@@ -1,4 +1,4 @@
-/* Dayspeak — Hybrid Design System (Duolingo Warmth + Arcade Edge) */
+/* Dayman — Hybrid Design System (Duolingo Warmth + Arcade Edge) */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
 :root {
@@ -60,6 +60,38 @@
   --neon-gold: #FFC800;
 }
 
+/* ================================================================ SPLASH */
+.splash {
+  position: fixed; inset: 0; z-index: 10000;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 600ms ease;
+}
+.splash.hiding { opacity: 0; pointer-events: none; }
+.splash-inner { text-align: center }
+.splash-text {
+  font-size: 44px; font-weight: 800; color: #fff;
+  letter-spacing: -0.02em; line-height: 1.1;
+  display: flex; justify-content: center; gap: 2px;
+}
+.splash-letter {
+  display: inline-block;
+}
+@keyframes letterBounce {
+  0% { opacity: 0; transform: translateY(28px) scale(0.4); }
+  55% { opacity: 1; transform: translateY(-6px) scale(1.06); }
+  78% { transform: translateY(2px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.splash-tagline {
+  font-size: 15px; font-weight: 600; color: rgba(255,255,255,.7);
+  margin: 12px 0 0; letter-spacing: .01em;
+  opacity: 0; transform: translateY(8px);
+  animation: tagIn 400ms ease forwards;
+  animation-delay: .9s;
+}
+@keyframes tagIn { to { opacity: 1; transform: none } }
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
 html, body { margin: 0; height: 100% }
 body {
@@ -99,12 +131,27 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
   padding: 4px var(--pad) 18px;
   display: flex; flex-direction: column;
 }
-.plan-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 12px; margin-bottom: 16px;
+.plan-user-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 4px;
 }
-.plan-header .q { text-align: left; font-size: 22px; margin: 0; flex: 1 1 auto; min-width: 0 }
-.plan-header .greeting-wave { font-size: 22px }
+.plan-user-left {
+  display: flex; align-items: center; gap: 10px;
+}
+.plan-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent-15); color: var(--accent);
+  font-weight: 800; font-size: 16px;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.plan-username {
+  font-size: 15px; font-weight: 700; color: var(--ink-2);
+}
+.plan-greeting {
+  text-align: left; font-size: 26px; font-weight: 800;
+  margin: 0 0 16px; color: var(--ink);
+}
+.plan-greeting .greeting-wave { font-size: 26px }
 .plan-header .lvl-badge { margin: 0; flex-shrink: 0; align-self: flex-start }
 .body.center { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center }
 
@@ -117,8 +164,8 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
 .dock.grid4 { display: flex; gap: 10px; flex-wrap: wrap }
 .dock.grid4 .btn { flex: 1 1 0; min-width: 0 }
 
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: .01em }
-.brand .mark { width: 22px; height: 22px; color: var(--accent) }
+.brand { display: flex; align-items: center; gap: 9px }
+.brand-name { font-family: var(--font); font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.01em }
 
 .link {
   color: var(--blue); font-size: 15px; font-weight: 700;

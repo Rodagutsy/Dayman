@@ -1,5 +1,5 @@
-/* Dayspeak service worker — cache the shell, serve offline. */
-var CACHE = 'dayspeak-v15';
+/* Dayman service worker — cache the shell, serve offline. */
+var CACHE = 'dayman-v1';
 var SHELL = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ var SHELL = [
   './js/screens.js',
   './js/audio.js',
   './js/confetti.js',
+  './js/splash.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

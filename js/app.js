@@ -1,4 +1,4 @@
-/* Dayspeak — entry point: wiring, resume, test hooks, service worker. */
+/* Dayman — entry point: wiring, resume, test hooks, service worker. */
 
 import { $, $$, LS, now, today, setWarp, getWarp, toast } from './utils.js';
 import { plan, getSession, setSession, history } from './state.js';
@@ -17,6 +17,7 @@ import {
 } from './screens.js';
 import { chime, tick as tickSfx, fanfare8bit, levelUp, breakStart, allDone } from './audio.js';
 import { burst, xpFloat, levelUpFlash, showScanlines, hideScanlines } from './confetti.js';
+import { runSplash } from './splash.js';
 
 // ---- plan init ----
 var timeInteracted = false;
@@ -156,6 +157,16 @@ function initPlan() {
   // greeting
   var greetEl = $('#greeting');
   if (greetEl) greetEl.textContent = getGreeting();
+  // avatar + username
+  var a = account();
+  var avatarEl = $('#plan-avatar');
+  var nameEl = $('#plan-username');
+  if (a && a.email) {
+    var name = a.email.split('@')[0];
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+  }
   // level badge
   renderLevelBadge();
   $('#lvl-badge').addEventListener('click', function () {
@@ -425,8 +436,18 @@ $('#signin-email').addEventListener('input', function () { $('#signin-err').clas
   speak('Picking up where you left off.', { interrupt: true });
 })();
 
-initPlan();
-if (!getSession()) show('plan');
+// ---- splash → boot ----
+if (getSession()) {
+  // session already resumed above — hide splash, skip animation
+  var splashEl = document.getElementById('splash');
+  if (splashEl) splashEl.style.display = 'none';
+  initPlan();
+} else {
+  runSplash(function boot() {
+    initPlan();
+    show('plan');
+  });
+}
 
 // ---- service worker ----
 if ('serviceWorker' in navigator) {
