@@ -152,10 +152,10 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 
 /* ================================================================ TASK AREA + MIC */
 .task-area { position: relative; margin-bottom: 0 }
-.task-area textarea { padding-right: 52px; padding-bottom: 52px; min-height: 120px }
+.task-area textarea { padding-right: 56px; padding-bottom: 56px; min-height: 120px }
 
 .mic-inline {
-  position: absolute; bottom: 6px; right: 6px;
+  position: absolute; bottom: 14px; right: 14px;
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--surface-2); border: 2px solid var(--line);
   color: var(--ink-3); display: grid; place-items: center;
