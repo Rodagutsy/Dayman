@@ -11,11 +11,11 @@
   --ink: #3C3C3C;
   --ink-2: #777777;
   --ink-3: #AFAFAF;
-  --accent: #58CC02;
+  --accent: #4FB802;
   --accent-2: #FF9600;
   --accent-ink: #FFFFFF;
   --warn: #FF4B4B;
-  --ok: #58CC02;
+  --ok: #4FB802;
   --blue: #1CB0F6;
   --purple: #CE82FF;
   --yellow: #FFC800;
@@ -29,32 +29,32 @@
   --pad: 20px;
   --font: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* accent opacity variants (green) */
-  --accent-06: rgba(88, 204, 2, .06);
-  --accent-08: rgba(88, 204, 2, .08);
-  --accent-10: rgba(88, 204, 2, .10);
-  --accent-14: rgba(88, 204, 2, .14);
-  --accent-15: rgba(88, 204, 2, .15);
-  --accent-18: rgba(88, 204, 2, .18);
-  --accent-20: rgba(88, 204, 2, .20);
-  --accent-22: rgba(88, 204, 2, .22);
-  --accent-25: rgba(88, 204, 2, .25);
-  --accent-28: rgba(88, 204, 2, .28);
-  --accent-30: rgba(88, 204, 2, .30);
-  --accent-35: rgba(88, 204, 2, .35);
-  --accent-38: rgba(88, 204, 2, .38);
-  --accent-40: rgba(88, 204, 2, .40);
-  --accent-50: rgba(88, 204, 2, .50);
-  --accent-58: rgba(88, 204, 2, .58);
-  --ok-07: rgba(88, 204, 2, .07);
-  --ok-08: rgba(88, 204, 2, .08);
-  --ok-14: rgba(88, 204, 2, .14);
-  --ok-25: rgba(88, 204, 2, .25);
-  --ok-34: rgba(88, 204, 2, .34);
+  --accent-06: rgba(79, 184, 2, .06);
+  --accent-08: rgba(79, 184, 2, .08);
+  --accent-10: rgba(79, 184, 2, .10);
+  --accent-14: rgba(79, 184, 2, .14);
+  --accent-15: rgba(79, 184, 2, .15);
+  --accent-18: rgba(79, 184, 2, .18);
+  --accent-20: rgba(79, 184, 2, .20);
+  --accent-22: rgba(79, 184, 2, .22);
+  --accent-25: rgba(79, 184, 2, .25);
+  --accent-28: rgba(79, 184, 2, .28);
+  --accent-30: rgba(79, 184, 2, .30);
+  --accent-35: rgba(79, 184, 2, .35);
+  --accent-38: rgba(79, 184, 2, .38);
+  --accent-40: rgba(79, 184, 2, .40);
+  --accent-50: rgba(79, 184, 2, .50);
+  --accent-58: rgba(79, 184, 2, .58);
+  --ok-07: rgba(79, 184, 2, .07);
+  --ok-08: rgba(79, 184, 2, .08);
+  --ok-14: rgba(79, 184, 2, .14);
+  --ok-25: rgba(79, 184, 2, .25);
+  --ok-34: rgba(79, 184, 2, .34);
   /* arcade dark (session screen) */
   --arcade-bg: #0A0A1A;
   --arcade-surface: #12121E;
   --arcade-line: #1E1E30;
-  --neon: #58CC02;
+  --neon: #4FB802;
   --neon-blue: #1CB0F6;
   --neon-purple: #CE82FF;
   --neon-gold: #FFC800;
@@ -114,7 +114,8 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
   background: var(--bg);
   display: grid; gap: 10px;
 }
-.dock.grid4 { grid-template-columns: 1fr 1fr; gap: 10px }
+.dock.grid4 { display: flex; gap: 10px; flex-wrap: wrap }
+.dock.grid4 .btn { flex: 1 1 0; min-width: 0 }
 
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: .01em }
 .brand .mark { width: 22px; height: 22px; color: var(--accent) }
@@ -388,33 +389,32 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 .tl-row.brk .tl-name { color: var(--accent-2); font-size: 13.5px }
 .tl-row.brk .tl-len, .tl-row.brk .tl-time { color: var(--ink-3) }
 
-/* ================================================================ SESSION (ARCADE MODE) */
+/* ================================================================ SESSION */
 .screen[data-screen="session"] {
-  background: var(--arcade-bg);
+  background: var(--bg);
 }
 .screen[data-screen="session"] .top {
-  background: var(--arcade-bg);
+  background: var(--bg);
 }
 .screen[data-screen="session"] .body {
-  background: var(--arcade-bg);
+  background: var(--bg);
 }
 .screen[data-screen="session"] .dock {
-  background: var(--arcade-bg);
+  background: var(--bg);
 }
-.screen[data-screen="session"] .top-title { color: rgba(255,255,255,.5) }
-.screen[data-screen="session"] .link { color: rgba(255,255,255,.5) }
-.screen[data-screen="session"] .link:active { color: #fff }
+.screen[data-screen="session"] .top-title { color: var(--ink-2) }
+.screen[data-screen="session"] .link { color: var(--ink-2) }
+.screen[data-screen="session"] .link:active { color: var(--ink) }
 
 .session .kicker {
   font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--neon-blue); margin: 0 0 12px; font-weight: 800;
-  text-shadow: 0 0 10px rgba(28,176,246,.4);
+  color: var(--blue); margin: 0 0 12px; font-weight: 800;
 }
 
 .task-name {
   font-size: 25px; line-height: 1.22; font-weight: 800;
   margin: 0 0 18px; max-width: 340px; overflow-wrap: anywhere;
-  color: #fff;
+  color: var(--ink);
 }
 
 .count {
@@ -423,63 +423,59 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
   font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
   font-size: 48px; line-height: 1; font-weight: 800;
   letter-spacing: -.03em; margin: 0;
-  color: var(--neon);
-  text-shadow: 0 0 20px rgba(88,204,2,.5), 0 0 40px rgba(88,204,2,.2);
+  color: var(--accent);
   font-family: 'Courier New', monospace;
-  transition: color 300ms ease, text-shadow 300ms ease;
+  transition: color 300ms ease;
 }
 .count.low {
   color: var(--warn);
-  text-shadow: 0 0 20px rgba(255,75,75,.5), 0 0 40px rgba(255,75,75,.2);
-  animation: neon-pulse-warn 1s ease-in-out infinite alternate;
+  animation: pulse-warn 1s ease-in-out infinite alternate;
 }
-.next { color: rgba(255,255,255,.4); font-size: 14px; margin: 0; max-width: 320px; overflow-wrap: anywhere }
+@keyframes pulse-warn { 0% { opacity: .6 } 100% { opacity: 1 } }
+.next { color: var(--ink-3); font-size: 14px; margin: 0; max-width: 320px; overflow-wrap: anywhere }
 .paused .count { opacity: .3 }
 
-/* countdown ring (arcade neon) */
+/* countdown ring */
 .ring-wrap { position: relative; width: 200px; height: 200px; margin: 0 0 14px }
 .ring { width: 100%; height: 100%; transform: rotate(-90deg) }
-.ring-bg { fill: none; stroke: var(--arcade-line); stroke-width: 8 }
+.ring-bg { fill: none; stroke: var(--line); stroke-width: 8 }
 .ring-fg {
-  fill: none; stroke: var(--neon); stroke-width: 8; stroke-linecap: round;
+  fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round;
   stroke-dasharray: 553; stroke-dashoffset: 0;
-  transition: stroke-dashoffset .25s linear, stroke .3s, filter .3s;
-  filter: drop-shadow(0 0 6px rgba(88,204,2,.6));
+  transition: stroke-dashoffset .25s linear, stroke .3s;
 }
 .ring-fg.low {
   stroke: var(--warn);
-  filter: drop-shadow(0 0 12px rgba(255,75,75,.6));
 }
 
 .decision {
   margin-top: 26px; width: 100%; max-width: 360px;
-  background: var(--arcade-surface); border: 2px solid var(--arcade-line);
+  background: var(--surface); border: 2px solid var(--line);
   border-radius: var(--r); padding: 16px;
   animation: rise 220ms cubic-bezier(.2, .7, .3, 1) both;
-  box-shadow: 0 0 20px rgba(88,204,2,.1);
 }
 .decision.hiding { animation: decisionOut 180ms ease both }
 @keyframes decisionOut { to { opacity: 0; transform: translateY(10px) } }
 @keyframes rise { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
-.dq { margin: 0 0 14px; font-size: 16px; color: #fff; font-weight: 700 }
+.dq { margin: 0 0 14px; font-size: 16px; color: var(--ink); font-weight: 700 }
 .dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px }
 .dcustom { display: flex; gap: 9px; align-items: center; margin-top: 9px;
   max-height: 0; opacity: 0; overflow: hidden;
   transition: max-height 250ms ease, opacity 200ms ease, margin 250ms ease; }
 .dcustom.show { max-height: 60px; opacity: 1; margin-top: 9px; }
 .dcustom input { width: auto; flex: 1 1 auto; text-align: center; padding: 12px 6px;
-  background: var(--arcade-surface); border-color: var(--arcade-line); color: #fff; }
+  background: var(--surface); border-color: var(--line); color: var(--ink); }
 .dcustom .btn { min-height: 48px; padding: 12px 16px; flex: 0 0 auto }
-.dcustom-toggle { font-size: 13px; color: rgba(255,255,255,.4); font-weight: 700; cursor: pointer; background: none; border: none; padding: 6px 0; margin-top: 8px; transition: color var(--t) }
-.dcustom-toggle:hover { color: rgba(255,255,255,.6) }
+.dcustom-toggle { font-size: 13px; color: var(--ink-3); font-weight: 700; cursor: pointer; background: none; border: none; padding: 6px 0; margin-top: 8px; transition: color var(--t) }
+.dcustom-toggle:hover { color: var(--ink-2) }
 
-/* session dock buttons (neon style) */
+/* session dock buttons */
 .screen[data-screen="session"] .dock .btn {
-  background: transparent; border: 2px solid rgba(255,255,255,.15);
-  border-bottom: 3px solid rgba(255,255,255,.1); color: rgba(255,255,255,.7);
+  background: var(--surface); border: 2px solid var(--line);
+  border-bottom: 3px solid var(--line); color: var(--ink-2);
 }
 .screen[data-screen="session"] .dock .btn:active {
-  background: rgba(255,255,255,.05); border-bottom-width: 2px;
+  background: var(--surface-2); border-bottom-width: 2px;
 }
 .screen[data-screen="session"] .dock .btn.primary {
   background: var(--accent); border-color: var(--accent);
@@ -492,19 +488,14 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 }
 .screen[data-screen="session"] .dock.expanded .btn.adv {
   opacity: 1; max-width: 100px; padding-left: 14px; padding-right: 14px;
-  border: 2px solid rgba(255,255,255,.15);
-  border-bottom: 3px solid rgba(255,255,255,.1);
+  border: 2px solid var(--line);
+  border-bottom: 3px solid var(--line);
   min-height: 52px;
 }
 
-/* scanline overlay (session screen) */
+/* scanline overlay (hidden — arcade effect not used on light theme) */
 .scanlines {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none; z-index: 9999; opacity: .04;
-  background: repeating-linear-gradient(
-    0deg, transparent 0px, transparent 2px,
-    rgba(0,0,0,.3) 2px, rgba(0,0,0,.3) 4px
-  );
+  display: none;
 }
 
 /* ================================================================ RECAP / HISTORY */
@@ -666,9 +657,9 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
   justify-content: flex-end; font-size: 9px; color: var(--ink-3); padding: 2px 3px 0 0;
 }
 .heat .cell.pad { background: transparent; border-color: transparent }
-.heat .cell.l1 { background: rgba(88,204,2,.15); border-color: rgba(88,204,2,.2); color: var(--accent) }
-.heat .cell.l2 { background: rgba(88,204,2,.3); border-color: rgba(88,204,2,.35); color: var(--accent) }
-.heat .cell.l3 { background: rgba(88,204,2,.5); border-color: rgba(88,204,2,.5); color: var(--accent-ink) }
+.heat .cell.l1 { background: rgba(79,184,2,.15); border-color: rgba(79,184,2,.2); color: var(--accent) }
+.heat .cell.l2 { background: rgba(79,184,2,.3); border-color: rgba(79,184,2,.35); color: var(--accent) }
+.heat .cell.l3 { background: rgba(79,184,2,.5); border-color: rgba(79,184,2,.5); color: var(--accent-ink) }
 .heat .cell.l4 { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 .heat .cell.today { box-shadow: 0 0 0 2px var(--accent) inset }
 .legend { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 11px; color: var(--ink-3) }
@@ -740,8 +731,8 @@ body[data-screen="session"] .toast { bottom: 172px }
 
 /* ================================================================ ARCADE NEON ANIMATIONS */
 @keyframes neon-pulse {
-  0% { text-shadow: 0 0 7px rgba(88,204,2,.6), 0 0 10px rgba(88,204,2,.4), 0 0 21px rgba(88,204,2,.3) }
-  100% { text-shadow: 0 0 4px rgba(88,204,2,.8), 0 0 11px rgba(88,204,2,.6), 0 0 40px rgba(88,204,2,.4) }
+  0% { text-shadow: 0 0 7px rgba(79,184,2,.6), 0 0 10px rgba(79,184,2,.4), 0 0 21px rgba(79,184,2,.3) }
+  100% { text-shadow: 0 0 4px rgba(79,184,2,.8), 0 0 11px rgba(79,184,2,.6), 0 0 40px rgba(79,184,2,.4) }
 }
 @keyframes neon-pulse-warn {
   0% { text-shadow: 0 0 7px rgba(255,75,75,.6), 0 0 10px rgba(255,75,75,.4) }
@@ -764,13 +755,13 @@ body[data-screen="session"] .toast { bottom: 172px }
 .level-up-flash {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(88,204,2,.15);
+  background: rgba(79,184,2,.15);
   animation: levelFlash 1.2s cubic-bezier(.68, -.55, .265, 1.55) forwards;
   pointer-events: none;
 }
 .level-up-flash .lu-text {
   font-size: 42px; font-weight: 800; color: var(--accent);
-  text-shadow: 0 0 20px rgba(88,204,2,.6), 0 0 40px rgba(88,204,2,.3);
+  text-shadow: 0 0 20px rgba(79,184,2,.6), 0 0 40px rgba(79,184,2,.3);
   animation: neon-pulse 1s ease-in-out infinite alternate;
 }
 @keyframes levelFlash {

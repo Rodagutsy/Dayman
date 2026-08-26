@@ -1,5 +1,5 @@
 /* Dayspeak service worker — cache the shell, serve offline. */
-var CACHE = 'dayspeak-v14';
+var CACHE = 'dayspeak-v15';
 var SHELL = [
   './',
   './index.html',
