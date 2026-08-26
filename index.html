@@ -32,21 +32,19 @@
       <div class="brand">
         <span class="brand-name">Dayman</span>
       </div>
-      <span>&nbsp;</span>
+      <div class="plan-user-row">
+        <div class="plan-avatar" id="plan-avatar">Y</div>
+        <div class="plan-user-info">
+          <span class="plan-username" id="plan-username">You</span>
+          <button class="lvl-badge" id="lvl-badge" type="button">
+            <span class="lvl-badge-text" id="lvl-badge-text">Level 1 · Spark</span>
+            <span class="lvl-badge-streak" id="lvl-badge-streak">no streak yet</span>
+          </button>
+        </div>
+      </div>
     </header>
 
     <div class="body">
-      <!-- user row: avatar+name left, streak pill right -->
-      <div class="plan-user-row">
-        <div class="plan-user-left">
-          <div class="plan-avatar" id="plan-avatar">Y</div>
-          <span class="plan-username" id="plan-username">You</span>
-        </div>
-        <button class="lvl-badge" id="lvl-badge" type="button">
-          <span class="lvl-badge-text" id="lvl-badge-text">Level 1 · Spark</span>
-          <span class="lvl-badge-streak" id="lvl-badge-streak">no streak yet</span>
-        </button>
-      </div>
       <!-- greeting below -->
       <h1 class="plan-greeting"><span class="greeting" id="greeting">Good morning</span> <span class="greeting-wave">&#x1F44B;</span></h1>
 
@@ -306,6 +304,123 @@
     </footer>
   </section>
 
+  <!-- ============ ONBOARDING ============ -->
+  <section class="screen hidden" id="screen-onboarding" data-screen="onboarding">
+    <header class="top">
+      <span>&nbsp;</span>
+      <span>&nbsp;</span>
+      <span>&nbsp;</span>
+    </header>
+    <div class="body onboarding-body">
+      <div class="onb-hero">
+        <div class="onb-icon">D</div>
+        <h1 class="onb-title">Welcome to Dayman</h1>
+        <p class="onb-sub">Speak your day. Get a focused plan. Stay on track with your voice coach.</p>
+      </div>
+
+      <div class="onb-tabs">
+        <button class="onb-tab is-on" id="onb-tab-signup" data-tab="signup">Sign up</button>
+        <button class="onb-tab" id="onb-tab-login" data-tab="login">Log in</button>
+      </div>
+
+      <div class="onb-form" id="onb-form-signup">
+        <label class="label" for="onb-signup-email">Email</label>
+        <input type="email" id="onb-signup-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        <label class="label" for="onb-signup-pw">Password</label>
+        <input type="password" id="onb-signup-pw" autocomplete="new-password" placeholder="At least 6 characters">
+        <p class="onb-err hidden" id="onb-signup-err"></p>
+        <button class="btn primary" id="onb-signup-go">Create account</button>
+      </div>
+
+      <div class="onb-form hidden" id="onb-form-login">
+        <label class="label" for="onb-login-email">Email</label>
+        <input type="email" id="onb-login-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        <label class="label" for="onb-login-pw">Password</label>
+        <input type="password" id="onb-login-pw" autocomplete="current-password" placeholder="Your password">
+        <p class="onb-err hidden" id="onb-login-err"></p>
+        <button class="btn primary" id="onb-login-go">Log in</button>
+      </div>
+
+      <div class="onb-divider"><span>or</span></div>
+      <button class="btn onb-guest" id="onb-guest">Continue as guest</button>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section class="screen hidden" id="screen-profile" data-screen="profile">
+    <header class="top">
+      <button class="link" id="btn-profile-back">Back</button>
+      <div class="top-title">Profile</div>
+      <span>&nbsp;</span>
+    </header>
+    <div class="body">
+      <div class="profile-hero">
+        <div class="profile-avatar" id="profile-avatar">Y</div>
+        <div class="profile-name" id="profile-name">Guest</div>
+        <div class="profile-email" id="profile-email"></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Display name</span>
+          </div>
+          <input type="text" id="profile-name-input" class="profile-input" placeholder="Your name">
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Email</span>
+            <span class="settings-desc" id="profile-email-desc"></span>
+          </div>
+          <button class="settings-action" id="btn-profile-change-email">Change</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Password</span>
+            <span class="settings-desc">Update your password</span>
+          </div>
+          <button class="settings-action" id="btn-profile-change-pw">Change</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Export data</span>
+            <span class="settings-desc">Download all your history, badges, and settings as JSON</span>
+          </div>
+          <button class="settings-action" id="btn-profile-export">Export</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Sign out</span>
+            <span class="settings-desc" id="profile-sync-status"></span>
+          </div>
+          <button class="settings-action danger" id="btn-profile-logout">Sign out</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-info">
+            <span class="settings-label">Delete account</span>
+            <span class="settings-desc">Permanently remove your account and all server data</span>
+          </div>
+          <button class="settings-action danger" id="btn-profile-delete">Delete</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div class="toast hidden" id="toast"></div>
 
   <!-- celebration elements -->
@@ -345,5 +460,6 @@
   </button>
 </nav>
 
-<script type="module" src="js/app.js?v=2"></script></body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="js/app.js?v=3"></script></body>
 </html>

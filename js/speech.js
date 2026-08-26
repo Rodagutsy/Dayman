@@ -67,12 +67,15 @@ export function listen(o) {
   rec.onstart = function () { o.onState && o.onState('listening'); };
   rec.onerror = function (e) { o.onState && o.onState('error:' + (e.error || '')); };
   rec.onend = function () { o.onState && o.onState('ended'); };
+  var lastIdx = 0;
   rec.onresult = function (e) {
     var fin = '', part = '';
-    for (var i = e.resultIndex; i < e.results.length; i++) {
+    for (var i = lastIdx; i < e.results.length; i++) {
       var r = e.results[i];
-      if (r.isFinal) fin += r[0].transcript; else part += r[0].transcript;
+      if (r.isFinal) fin += r[0].transcript;
+      else part = r[0].transcript;
     }
+    lastIdx = e.results.length;
     if (part) o.onPartial && o.onPartial(part);
     if (fin) o.onFinal && o.onFinal(fin.trim());
   };

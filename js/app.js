@@ -18,6 +18,8 @@ import {
 import { chime, tick as tickSfx, fanfare8bit, levelUp, breakStart, allDone } from './audio.js';
 import { burst, xpFloat, levelUpFlash, showScanlines, hideScanlines } from './confetti.js';
 import { runSplash } from './splash.js';
+import { initAuth, signUp, signIn, signOut, currentUser, isConfigured, updateProfile, deleteAccount } from './auth.js';
+import { syncUp, syncDown, exportData } from './sync.js';
 
 // ---- plan init ----
 var timeInteracted = false;
@@ -159,14 +161,13 @@ function initPlan() {
   if (greetEl) greetEl.textContent = getGreeting();
   // avatar + username
   var a = account();
+  var profile = LS.get('profile', null);
+  var displayName = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'You');
+  displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
   var avatarEl = $('#plan-avatar');
   var nameEl = $('#plan-username');
-  if (a && a.email) {
-    var name = a.email.split('@')[0];
-    name = name.charAt(0).toUpperCase() + name.slice(1);
-    if (nameEl) nameEl.textContent = name;
-    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
-  }
+  if (nameEl) nameEl.textContent = displayName;
+  if (avatarEl) avatarEl.textContent = displayName.charAt(0).toUpperCase();
   // level badge
   renderLevelBadge();
   $('#lvl-badge').addEventListener('click', function () {
@@ -279,9 +280,7 @@ $('#btn-settings-voice').addEventListener('click', function () {
   toast(muted ? 'Voice coach on' : 'Voice coach off');
 });
 $('#btn-settings-account').addEventListener('click', function () {
-  var a = account();
-  if (a && a.email) { toast('Account management coming soon'); return; }
-  renderSignin(); show('signin');
+  initProfile(); show('profile');
 });
 $('#btn-settings-clear').addEventListener('click', function () {
   if (!confirm('Clear all data? This removes your history, badges, and settings on this device.')) return;
@@ -413,6 +412,133 @@ $('#btn-signin-go').addEventListener('click', function () {
 });
 $('#signin-email').addEventListener('input', function () { $('#signin-err').classList.add('hidden'); });
 
+// ---- onboarding ----
+function finishOnboarding() {
+  LS.set('onboarded', true);
+  goPlan();
+}
+
+function initOnboarding() {
+  var sb = isConfigured();
+  if (!sb) {
+    finishOnboarding();
+    return;
+  }
+  // tab switching
+  $$('.onb-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      $$('.onb-tab').forEach(function (b) { b.classList.remove('is-on'); });
+      t.classList.add('is-on');
+      var tab = t.dataset.tab;
+      $('#onb-form-signup').classList.toggle('hidden', tab !== 'signup');
+      $('#onb-form-login').classList.toggle('hidden', tab !== 'login');
+    });
+  });
+  // signup
+  $('#onb-signup-go').addEventListener('click', async function () {
+    var email = ($('#onb-signup-email').value || '').trim();
+    var pw = $('#onb-signup-pw').value || '';
+    var errEl = $('#onb-signup-err');
+    errEl.classList.add('hidden');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      errEl.textContent = 'Please enter a valid email.'; errEl.classList.remove('hidden'); return;
+    }
+    if (pw.length < 6) {
+      errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.remove('hidden'); return;
+    }
+    this.disabled = true; this.textContent = 'Creating...';
+    var res = await signUp(email, pw);
+    this.disabled = false; this.textContent = 'Create account';
+    if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
+    await syncUp();
+    finishOnboarding();
+  });
+  // login
+  $('#onb-login-go').addEventListener('click', async function () {
+    var email = ($('#onb-login-email').value || '').trim();
+    var pw = $('#onb-login-pw').value || '';
+    var errEl = $('#onb-login-err');
+    errEl.classList.add('hidden');
+    if (!email || !pw) { errEl.textContent = 'Enter email and password.'; errEl.classList.remove('hidden'); return; }
+    this.disabled = true; this.textContent = 'Logging in...';
+    var res = await signIn(email, pw);
+    this.disabled = false; this.textContent = 'Log in';
+    if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
+    await syncDown();
+    finishOnboarding();
+  });
+  // guest
+  $('#onb-guest').addEventListener('click', function () { finishOnboarding(); });
+  show('onboarding');
+}
+
+// ---- profile ----
+function initProfile() {
+  var u = currentUser();
+  var a = account();
+  var profile = LS.get('profile', null);
+  var name = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'Guest');
+  var initial = name.charAt(0).toUpperCase();
+  $('#profile-avatar').textContent = initial;
+  $('#profile-name').textContent = name;
+  $('#profile-email').textContent = u ? u.email : (a ? a.email : 'Guest mode');
+  $('#profile-email-desc').textContent = u ? u.email : 'No account linked';
+  $('#profile-name-input').value = profile && profile.name ? profile.name : '';
+  // save name
+  $('#profile-name-input').addEventListener('change', async function () {
+    var v = this.value.trim();
+    if (!v) return;
+    var p = LS.get('profile', {}); p.name = v; LS.set('profile', p);
+    if (u) await updateProfile({ display_name: v });
+    toast('Name updated');
+    renderProfileDisplay();
+  });
+  // change email (placeholder)
+  $('#btn-profile-change-email').addEventListener('click', function () {
+    toast('Email change coming soon');
+  });
+  // change password
+  $('#btn-profile-change-pw').addEventListener('click', function () {
+    toast('Password change coming soon');
+  });
+  // export
+  $('#btn-profile-export').addEventListener('click', function () {
+    exportData();
+    toast('Data exported');
+  });
+  // sign out
+  $('#btn-profile-logout').addEventListener('click', async function () {
+    if (!confirm('Sign out? Your data stays on this device.')) return;
+    await syncUp();
+    await signOut();
+    toast('Signed out');
+    renderSettings();
+    goPlan();
+  });
+  // delete
+  $('#btn-profile-delete').addEventListener('click', async function () {
+    if (!confirm('Delete your account and all server data? This cannot be undone.')) return;
+    if (!confirm('Really delete everything?')) return;
+    var res = await deleteAccount();
+    if (res.error) { toast('Delete failed: ' + res.error); return; }
+    try { localStorage.clear(); } catch (e) {}
+    toast('Account deleted');
+    goPlan();
+  });
+}
+
+function renderProfileDisplay() {
+  var u = currentUser();
+  var a = account();
+  var profile = LS.get('profile', null);
+  var name = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'Guest');
+  $('#profile-avatar').textContent = name.charAt(0).toUpperCase();
+  $('#profile-name').textContent = name;
+  if ($('#profile-name-input')) $('#profile-name-input').value = profile && profile.name ? profile.name : '';
+}
+
+$('#btn-profile-back').addEventListener('click', function () { renderSettings(); show('settings'); });
+
 // ---- any interaction cancels auto-advance ----
 ['pointerdown', 'keydown'].forEach(function (ev) {
   document.addEventListener(ev, function () {
@@ -437,17 +563,31 @@ $('#signin-email').addEventListener('input', function () { $('#signin-err').clas
 })();
 
 // ---- splash → boot ----
-if (getSession()) {
-  // session already resumed above — hide splash, skip animation
-  var splashEl = document.getElementById('splash');
-  if (splashEl) splashEl.style.display = 'none';
-  initPlan();
-} else {
-  runSplash(function boot() {
+(function bootApp() {
+  var hasSession = !!getSession();
+  var onboarded = LS.get('onboarded', false);
+
+  async function afterSplash() {
     initPlan();
-    show('plan');
-  });
-}
+    await initAuth().catch(function () {});
+    if (!onboarded) {
+      initOnboarding();
+    } else {
+      if (currentUser()) { await syncDown().catch(function () {}); }
+      show('plan');
+    }
+  }
+
+  if (hasSession) {
+    var splashEl = document.getElementById('splash');
+    if (splashEl) splashEl.style.display = 'none';
+    initPlan();
+  } else {
+    runSplash(function () {
+      afterSplash();
+    });
+  }
+})();
 
 // ---- service worker ----
 if ('serviceWorker' in navigator) {

@@ -132,27 +132,26 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
   display: flex; flex-direction: column;
 }
 .plan-user-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
 }
-.plan-user-left {
-  display: flex; align-items: center; gap: 10px;
+.plan-user-info {
+  display: flex; flex-direction: column; align-items: flex-start;
 }
 .plan-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   background: var(--accent-15); color: var(--accent);
   font-weight: 800; font-size: 16px;
   display: grid; place-items: center; flex-shrink: 0;
 }
 .plan-username {
   font-size: 15px; font-weight: 700; color: var(--ink-2);
+  line-height: 1.1;
 }
 .plan-greeting {
   text-align: left; font-size: 26px; font-weight: 800;
   margin: 0 0 16px; color: var(--ink);
 }
 .plan-greeting .greeting-wave { font-size: 26px }
-.plan-header .lvl-badge { margin: 0; flex-shrink: 0; align-self: flex-start }
 .body.center { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center }
 
 .dock {
@@ -589,18 +588,17 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 
 /* ================================================================ LEVEL BADGE */
 .lvl-badge {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 6px;
   align-self: flex-start;
-  background: var(--surface); border: 2px solid var(--line);
-  border-bottom: 3px solid var(--line); border-radius: 999px;
-  padding: 6px 14px; font-size: 13px; color: var(--ink-2);
-  font-weight: 600; margin: 4px 0 12px; cursor: pointer;
-  animation: fade 300ms ease both;
+  background: none; border: none;
+  border-radius: 0;
+  padding: 0; font-size: 12px; color: var(--ink-3);
+  font-weight: 600; margin: 2px 0 0; cursor: pointer;
   transition: transform .15s ease;
 }
 .lvl-badge:active { transform: scale(.96) }
-.lvl-badge-text { font-weight: 800; color: var(--ink) }
-.lvl-badge-streak { color: var(--accent-2); font-weight: 800; font-size: 12.5px; display: none }
+.lvl-badge-text { font-weight: 700; color: var(--ink-3) }
+.lvl-badge-streak { color: var(--accent-2); font-weight: 800; font-size: 11px; display: none }
 .lvl-badge.show-streak .lvl-badge-text { display: none }
 .lvl-badge.show-streak .lvl-badge-streak { display: inline }
 
@@ -753,6 +751,61 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 .si-err { color: var(--warn); font-size: 13px; margin: 8px 0 0 }
 #signin-email { margin-top: 2px }
 .center-link { justify-content: center; color: var(--ink-3) }
+
+/* ================================================================ ONBOARDING */
+.onboarding-body { justify-content: center; align-items: center; text-align: center; padding-top: 0 }
+.onb-hero { margin-bottom: 28px }
+.onb-icon {
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+  background: var(--accent); color: #fff; font-size: 22px; font-weight: 800;
+  display: grid; place-items: center;
+}
+.onb-title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: var(--ink) }
+.onb-sub { font-size: 15px; color: var(--ink-2); margin: 0; line-height: 1.5; max-width: 300px }
+.onb-tabs {
+  display: flex; gap: 0; background: var(--surface); border: 2px solid var(--line);
+  border-radius: 999px; padding: 3px; margin-bottom: 20px; width: 100%; max-width: 300px;
+}
+.onb-tab {
+  flex: 1; padding: 10px; border-radius: 999px; font-size: 14px; font-weight: 700;
+  color: var(--ink-2); transition: background var(--t), color var(--t); text-align: center;
+}
+.onb-tab.is-on { background: var(--accent); color: #fff }
+.onb-form { width: 100%; max-width: 300px; text-align: left }
+.onb-form .label { margin-bottom: 6px }
+.onb-form input { margin-bottom: 12px }
+.onb-err { color: var(--warn); font-size: 13px; margin: 0 0 10px }
+.onb-divider {
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 300px;
+  margin: 16px 0; color: var(--ink-3); font-size: 13px; font-weight: 600;
+}
+.onb-divider::before, .onb-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
+}
+.onb-guest {
+  width: 100%; max-width: 300px; min-height: 52px; border-radius: var(--r);
+  background: var(--surface); border: 2px solid var(--line);
+  border-bottom: 4px solid var(--line); font-size: 16px; font-weight: 800;
+  color: var(--ink-2); text-transform: uppercase; letter-spacing: .5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.onb-guest:active { transform: translateY(4px); border-bottom-width: 2px }
+
+/* ================================================================ PROFILE */
+.profile-hero {
+  text-align: center; padding: 8px 0 20px;
+}
+.profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px;
+  background: var(--accent-15); color: var(--accent); font-weight: 800; font-size: 24px;
+  display: grid; place-items: center;
+}
+.profile-name { font-size: 20px; font-weight: 800; color: var(--ink) }
+.profile-email { font-size: 14px; color: var(--ink-3); margin-top: 2px }
+.profile-input {
+  width: auto; max-width: 160px; text-align: right; padding: 8px 12px;
+  font-size: 14px; flex-shrink: 0;
+}
 
 /* ================================================================ TOAST */
 .toast {

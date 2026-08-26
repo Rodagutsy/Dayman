@@ -13,6 +13,7 @@ import {
 import { stopTick, setFinishDayFn, setBuildBlocksFn, setShowFn } from './session.js';
 import { hideScanlines, burst, levelUpFlash } from './confetti.js';
 import { allDone, fanfare8bit, levelUp } from './audio.js';
+import { syncUp } from './sync.js';
 
 var TECHS = {
   pomodoro: { name: 'Pomodoro', focus: 25, brk: 5, longEvery: 4, longBrk: 15 },
@@ -283,6 +284,7 @@ export function finishDay() {
   });
   var h = history(); h[rec.date] = rec; LS.set('history', h);
   LS.set('session', null);
+  syncUp(); // sync to cloud after completing a day
   var gain = xpForDay(rec, streakOf(h, rec.date));
   var unlocks = checkUnlocks();
   renderRecap(rec, gain, unlocks);
