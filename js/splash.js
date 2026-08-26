@@ -1,5 +1,5 @@
 /* Dayman — animated splash screen */
-import { splashNote, splashFinal, unlockAudio } from './audio.js';
+import { splashNote, splashFinal } from './audio.js';
 
 const NAME = 'Dayman';
 const LETTER_DELAY = 70;   // ms between each letter
@@ -24,7 +24,7 @@ export function runSplash(onDone) {
 
     // sound per letter
     setTimeout(function () {
-      try { unlockAudio(); splashNote(i); } catch (e) {}
+      try { splashNote(i); } catch (e) {}
     }, 200 + i * LETTER_DELAY);
   });
 
