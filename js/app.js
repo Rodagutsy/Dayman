@@ -452,7 +452,13 @@ if (getSession()) {
 // ---- service worker ----
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    // clear stale caches from old builds
+    caches.keys().then(function (ks) {
+      return Promise.all(ks.filter(function (k) { return k !== 'dayman-v1'; }).map(function (k) { return caches.delete(k); }));
+    });
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      if (reg.waiting) reg.waiting.postMessage('skip');
+    }).catch(function () {});
   });
 }
 

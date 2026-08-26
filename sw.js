@@ -40,6 +40,10 @@ self.addEventListener('activate', function (e) {
   );
 });
 
+self.addEventListener('message', function (e) {
+  if (e.data === 'skip') self.skipWaiting();
+});
+
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
