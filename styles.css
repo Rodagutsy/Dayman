@@ -754,7 +754,7 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 
 /* ================================================================ ONBOARDING */
 .onboarding-body { align-items: center; text-align: center; padding-top: 0 }
-.onb-hero { margin-bottom: 28px; flex-shrink: 0 }
+.onb-hero { margin-bottom: 24px; flex-shrink: 0 }
 .onb-title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: var(--ink) }
 .onb-sub { font-size: 15px; color: var(--ink-2); margin: 0; line-height: 1.5; max-width: 300px }
 .onb-tabs {
@@ -770,24 +770,22 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 .onb-form.hidden { display: none }
 .onb-form .label { margin-bottom: 6px }
 .onb-form input { margin-bottom: 12px }
-.onb-form .btn { width: 100% }
+.onb-form .btn { width: 100%; margin-top: 8px; margin-bottom: 0 }
 .onb-err { color: var(--warn); font-size: 13px; margin: 0 0 10px }
 .onb-divider {
   display: flex; align-items: center; gap: 12px; width: 100%; max-width: 300px;
-  margin: 16px 0; color: var(--ink-3); font-size: 13px; font-weight: 600;
+  margin: 12px 0; color: var(--ink-3); font-size: 13px; font-weight: 600;
 }
 .onb-divider::before, .onb-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--line);
 }
-.onb-guest {
-  width: 100%; max-width: 300px; min-height: 52px; border-radius: var(--r);
-  background: var(--surface); border: 2px solid var(--line);
-  border-bottom: 4px solid var(--line); font-size: 16px; font-weight: 800;
-  color: var(--ink-2); text-transform: uppercase; letter-spacing: .5px;
+.onb-link {
+  font-size: 15px; font-weight: 700; color: var(--ink-3);
+  text-decoration: none; padding: 8px 4px; min-height: 44px;
   display: flex; align-items: center; justify-content: center;
-  padding: 14px 18px;
+  transition: color var(--t);
 }
-.onb-guest:active { transform: translateY(4px); border-bottom-width: 2px }
+.onb-link:active { color: var(--ink-2) }
 
 /* ================================================================ PROFILE */
 .profile-hero {

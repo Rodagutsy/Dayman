@@ -32,12 +32,17 @@ create table if not exists active_sessions (
   scheduled_at timestamptz default now()
 );
 
--- 3. RLS policies (row-level security)
+-- 5. RLS policies (row-level security) — idempotent
 alter table profiles enable row level security;
 alter table user_data enable row level security;
 alter table push_subscriptions enable row level security;
 
--- Profiles: users can only read/write their own
+-- Profiles: drop old policies, then recreate
+drop policy if exists "Users can view own profile" on profiles;
+drop policy if exists "Users can update own profile" on profiles;
+drop policy if exists "Users can insert own profile" on profiles;
+drop policy if exists "Users can delete own profile" on profiles;
+
 create policy "Users can view own profile"
   on profiles for select
   using (auth.uid() = id);
@@ -54,7 +59,12 @@ create policy "Users can delete own profile"
   on profiles for delete
   using (auth.uid() = id);
 
--- User data: users can only read/write their own
+-- User data: drop old policies, then recreate
+drop policy if exists "Users can view own data" on user_data;
+drop policy if exists "Users can update own data" on user_data;
+drop policy if exists "Users can insert own data" on user_data;
+drop policy if exists "Users can delete own data" on user_data;
+
 create policy "Users can view own data"
   on user_data for select
   using (auth.uid() = user_id);
@@ -71,7 +81,12 @@ create policy "Users can delete own data"
   on user_data for delete
   using (auth.uid() = user_id);
 
--- Push subscriptions: users can only read/write/delete their own
+-- Push subscriptions: drop old policies, then recreate
+drop policy if exists "Users can view own push subscription" on push_subscriptions;
+drop policy if exists "Users can upsert own push subscription" on push_subscriptions;
+drop policy if exists "Users can update own push subscription" on push_subscriptions;
+drop policy if exists "Users can delete own push subscription" on push_subscriptions;
+
 create policy "Users can view own push subscription"
   on push_subscriptions for select
   using (auth.uid() = user_id);
