@@ -914,7 +914,7 @@ body[data-screen="settings"] .screen:not(.hidden) {
 .settings-card {
   background: var(--surface); border: 2px solid var(--line);
   border-bottom: 4px solid var(--line); border-radius: var(--r);
-  margin-bottom: 10px; overflow: hidden;
+  margin-bottom: 10px;
 }
 .settings-row {
   display: flex; align-items: center; justify-content: space-between;
