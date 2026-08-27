@@ -68,6 +68,7 @@ export function listen(o) {
   rec.onerror = function (e) { o.onState && o.onState('error:' + (e.error || '')); };
   rec.onend = function () { o.onState && o.onState('ended'); };
   var lastIdx = 0;
+  var _prevFin = '';
   rec.onresult = function (e) {
     var fin = '', part = '';
     for (var i = lastIdx; i < e.results.length; i++) {
@@ -77,7 +78,17 @@ export function listen(o) {
     }
     lastIdx = e.results.length;
     if (part) o.onPartial && o.onPartial(part);
-    if (fin) o.onFinal && o.onFinal(fin.trim());
+    if (fin) {
+      var full = fin.trim();
+      // Mobile overlap detection: speech API produces progressive finals
+      // ("I want" → "I want to" → "I want to design"). Only emit the new portion.
+      var prev = _prevFin.trim();
+      if (prev && full.indexOf(prev) === 0) {
+        full = full.substring(prev.length).trim();
+      }
+      _prevFin = fin;
+      if (full) o.onFinal && o.onFinal(full);
+    }
   };
   try { rec.start(); } catch (e) { o.onState && o.onState('error:start'); }
   return rec;

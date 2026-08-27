@@ -183,7 +183,7 @@ h1.q { font-size: 27px; line-height: 1.2; font-weight: 800; margin: 8px 0 6px; l
 }
 
 /* ================================================================ INPUTS */
-textarea, input[type=number], input[type=text], input[type=email] {
+textarea, input[type=number], input[type=text], input[type=email], input[type=password] {
   width: 100%; background: var(--surface);
   border: 2px solid var(--line); border-radius: var(--r);
   padding: 14px; color: var(--ink); resize: none;
@@ -788,6 +788,7 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
   border-bottom: 4px solid var(--line); font-size: 16px; font-weight: 800;
   color: var(--ink-2); text-transform: uppercase; letter-spacing: .5px;
   display: flex; align-items: center; justify-content: center;
+  padding: 14px 18px;
 }
 .onb-guest:active { transform: translateY(4px); border-bottom-width: 2px }
 

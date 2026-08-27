@@ -205,7 +205,7 @@ $('#btn-mic-plan').addEventListener('click', function () {
     continuous: true,
     onPartial: function (p) { var el = $('#mic-live'); el.textContent = p; el.classList.remove('hidden'); },
     onFinal: function (f) {
-      base = (base ? base.replace(/[,\s]+$/, '') + ', ' : '') + f;
+      base = (base ? base.replace(/[\s]+$/, '') + ' ' : '') + f;
       $('#tasks-input').value = base;
       $('#mic-live').textContent = '';
       $('#mic-live').classList.add('hidden');
