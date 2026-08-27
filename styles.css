@@ -753,8 +753,8 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 .center-link { justify-content: center; color: var(--ink-3) }
 
 /* ================================================================ ONBOARDING */
-.onboarding-body { justify-content: center; align-items: center; text-align: center; padding-top: 0 }
-.onb-hero { margin-bottom: 28px }
+.onboarding-body { align-items: center; text-align: center; padding-top: 0 }
+.onb-hero { margin-bottom: 28px; flex-shrink: 0 }
 .onb-title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: var(--ink) }
 .onb-sub { font-size: 15px; color: var(--ink-2); margin: 0; line-height: 1.5; max-width: 300px }
 .onb-tabs {
@@ -767,6 +767,7 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 }
 .onb-tab.is-on { background: var(--accent); color: #fff }
 .onb-form { width: 100%; max-width: 300px; text-align: left; display: flex; flex-direction: column }
+.onb-form.hidden { display: none }
 .onb-form .label { margin-bottom: 6px }
 .onb-form input { margin-bottom: 12px }
 .onb-form .btn { width: 100% }

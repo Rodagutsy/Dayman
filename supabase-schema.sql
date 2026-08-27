@@ -16,9 +16,26 @@ create table if not exists user_data (
   updated_at timestamptz default now()
 );
 
+-- 3. Push subscriptions table (for background notifications)
+create table if not exists push_subscriptions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  endpoint text not null,
+  keys jsonb not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 4. Active sessions table (for scheduling background notifications)
+create table if not exists active_sessions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  blocks jsonb not null default '[]',
+  scheduled_at timestamptz default now()
+);
+
 -- 3. RLS policies (row-level security)
 alter table profiles enable row level security;
 alter table user_data enable row level security;
+alter table push_subscriptions enable row level security;
 
 -- Profiles: users can only read/write their own
 create policy "Users can view own profile"
@@ -52,6 +69,23 @@ create policy "Users can insert own data"
 
 create policy "Users can delete own data"
   on user_data for delete
+  using (auth.uid() = user_id);
+
+-- Push subscriptions: users can only read/write/delete their own
+create policy "Users can view own push subscription"
+  on push_subscriptions for select
+  using (auth.uid() = user_id);
+
+create policy "Users can upsert own push subscription"
+  on push_subscriptions for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own push subscription"
+  on push_subscriptions for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own push subscription"
+  on push_subscriptions for delete
   using (auth.uid() = user_id);
 
 -- 4. Auto-create profile on signup
