@@ -4,7 +4,7 @@ export function parseTasks(raw) {
   if (!raw) return [];
   var parts = String(raw)
     .replace(/\r/g, '')
-    .split(/\n|,|;|·|•/g);
+    .split(/\n|,|;|·|•|\bthen\b/gi);
   var out = [];
   parts.forEach(function (p) {
     var s = p.replace(/^[\s\-–—*\d.)]+/, '').trim();

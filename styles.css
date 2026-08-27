@@ -755,11 +755,6 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
 /* ================================================================ ONBOARDING */
 .onboarding-body { justify-content: center; align-items: center; text-align: center; padding-top: 0 }
 .onb-hero { margin-bottom: 28px }
-.onb-icon {
-  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
-  background: var(--accent); color: #fff; font-size: 22px; font-weight: 800;
-  display: grid; place-items: center;
-}
 .onb-title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: var(--ink) }
 .onb-sub { font-size: 15px; color: var(--ink-2); margin: 0; line-height: 1.5; max-width: 300px }
 .onb-tabs {
@@ -771,9 +766,10 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
   color: var(--ink-2); transition: background var(--t), color var(--t); text-align: center;
 }
 .onb-tab.is-on { background: var(--accent); color: #fff }
-.onb-form { width: 100%; max-width: 300px; text-align: left }
+.onb-form { width: 100%; max-width: 300px; text-align: left; display: flex; flex-direction: column }
 .onb-form .label { margin-bottom: 6px }
 .onb-form input { margin-bottom: 12px }
+.onb-form .btn { width: 100% }
 .onb-err { color: var(--warn); font-size: 13px; margin: 0 0 10px }
 .onb-divider {
   display: flex; align-items: center; gap: 12px; width: 100%; max-width: 300px;
