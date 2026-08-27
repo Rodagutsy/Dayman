@@ -32,10 +32,26 @@ create table if not exists active_sessions (
   scheduled_at timestamptz default now()
 );
 
+-- 5. Weekly leaderboard scores (computed server-side from user_data history)
+create table if not exists weekly_scores (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  week_start date not null,
+  xp int not null default 0,
+  tasks_completed int not null default 0,
+  focus_minutes int not null default 0,
+  active_days int not null default 0,
+  display_name text not null default '',
+  updated_at timestamptz not null default now(),
+  primary key (user_id, week_start)
+);
+
+create index if not exists idx_weekly_scores_week on weekly_scores (week_start, xp desc);
+
 -- 5. RLS policies (row-level security) — idempotent
 alter table profiles enable row level security;
 alter table user_data enable row level security;
 alter table push_subscriptions enable row level security;
+alter table weekly_scores enable row level security;
 
 -- Profiles: drop old policies, then recreate
 drop policy if exists "Users can view own profile" on profiles;
@@ -102,6 +118,14 @@ create policy "Users can update own push subscription"
 create policy "Users can delete own push subscription"
   on push_subscriptions for delete
   using (auth.uid() = user_id);
+
+-- Weekly scores: authenticated users can read all scores (public leaderboard)
+-- No INSERT/UPDATE/DELETE policies — only the Edge Function (service_role) writes
+drop policy if exists "Authenticated can read weekly scores" on weekly_scores;
+
+create policy "Authenticated can read weekly scores"
+  on weekly_scores for select
+  using (auth.role() = 'authenticated');
 
 -- 4. Auto-create profile on signup
 create or replace function handle_new_user()

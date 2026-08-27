@@ -14,6 +14,7 @@ import { stopTick, setFinishDayFn, setBuildBlocksFn, setShowFn } from './session
 import { hideScanlines, burst, levelUpFlash } from './confetti.js';
 import { allDone, fanfare8bit, levelUp } from './audio.js';
 import { syncUp } from './sync.js';
+import { fetchLeaderboard, syncLeaderboard } from './leaderboard.js';
 
 var TECHS = {
   pomodoro: { name: 'Pomodoro', focus: 25, brk: 5, longEvery: 4, longBrk: 15 },
@@ -285,6 +286,7 @@ export function finishDay() {
   var h = history(); h[rec.date] = rec; LS.set('history', h);
   LS.set('session', null);
   syncUp(); // sync to cloud after completing a day
+  syncLeaderboard(); // sync weekly score to leaderboard
   var gain = xpForDay(rec, streakOf(h, rec.date));
   var unlocks = checkUnlocks();
   renderRecap(rec, gain, unlocks);
@@ -705,7 +707,7 @@ function renderRank(h) {
   h = h || history();
   var st = localStanding(h), card = $('#rank-card');
   card.innerHTML = '<div class="rk">Your record</div><div class="rv"></div>' +
-    '<div class="rd"></div><div class="rl">Compared to your own past — no leaderboards yet.</div>';
+    '<div class="rd"></div><div class="rl"></div>';
   if (!st) {
     $('.rv', card).textContent = 'Not ranked yet';
     $('.rd', card).textContent = 'Finish one day to start building a record.';
@@ -714,8 +716,29 @@ function renderRank(h) {
   var lv = levelOf(st.xp);
   $('.rv', card).textContent = st.consistency + '% consistency';
   $('.rd', card).textContent = 'Active on ' + st.active + ' of the last ' + st.span + ' day' +
-    (st.span === 1 ? '' : 's') + ' · ' + st.xp + ' XP · Level ' + lv.level + ' ' + lv.name +
-    '. Compared to your own past — no leaderboards yet.';
+    (st.span === 1 ? '' : 's') + ' · ' + st.xp + ' XP · Level ' + lv.level + ' ' + lv.name;
+
+  // Fetch leaderboard
+  fetchLeaderboard(10).then(function (lb) {
+    if (!lb || !lb.me) {
+      $('.rl', card).textContent = 'Sign in to compete on the weekly leaderboard.';
+      return;
+    }
+    var html = '';
+    if (lb.total_players > 1) {
+      html += '<b>#' + lb.my_rank + '</b> of ' + lb.total_players + ' players this week · ' + lb.me.xp + ' XP';
+    } else {
+      html += lb.me.xp + ' XP this week · You\'re the only player so far.';
+    }
+    if (lb.top && lb.top.length > 0) {
+      html += '<br><br><b>Top players:</b><br>';
+      lb.top.slice(0, 5).forEach(function (r, i) {
+        var name = r.display_name || 'Anonymous';
+        html += (i + 2) + '. ' + name + ' — ' + r.xp + ' XP<br>';
+      });
+    }
+    $('.rl', card).innerHTML = html;
+  });
 }
 
 export function renderLevelBadge() {

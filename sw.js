@@ -1,5 +1,5 @@
 /* Dayman service worker — cache the shell, serve offline. */
-var CACHE = 'dayman-v3';
+var CACHE = 'dayman-v4';
 var SHELL = [
   './',
   './index.html',
@@ -21,6 +21,7 @@ var SHELL = [
   './js/auth.js',
   './js/sync.js',
   './js/notify.js',
+  './js/leaderboard.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
