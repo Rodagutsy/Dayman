@@ -592,10 +592,7 @@ $('#btn-profile-back').addEventListener('click', function () { renderSettings();
 // ---- service worker ----
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    // clear stale caches from old builds
-    caches.keys().then(function (ks) {
-      return Promise.all(ks.filter(function (k) { return k !== 'dayman-v1'; }).map(function (k) { return caches.delete(k); }));
-    });
+    // The SW's activate handler prunes old caches; just register here.
     navigator.serviceWorker.register('sw.js').then(function (reg) {
       if (reg.waiting) reg.waiting.postMessage('skip');
     }).catch(function () {});
