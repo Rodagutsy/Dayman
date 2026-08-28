@@ -860,6 +860,10 @@ body[data-screen="session"] .toast { bottom: 172px }
   text-shadow: 0 0 20px rgba(79,184,2,.6), 0 0 40px rgba(79,184,2,.3);
   animation: neon-pulse 1s ease-in-out infinite alternate;
 }
+.level-up-flash.welcome { background: rgba(30,140,220,.16) }
+.level-up-flash.welcome .lu-text {
+  color: #fff; text-shadow: 0 0 22px rgba(28,176,246,.85), 0 0 46px rgba(28,176,246,.45);
+}
 @keyframes levelFlash {
   0% { opacity: 0; }
   15% { opacity: 1; }

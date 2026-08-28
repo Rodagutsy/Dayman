@@ -415,7 +415,8 @@ function wireAuthForm(prefix, onSuccess) {
     });
   });
   // signup
-  $('#' + prefix + 'signup-go').addEventListener('click', async function () {
+  var suBtn = $('#' + prefix + 'signup-go');
+  if (suBtn) suBtn.addEventListener('click', async function () {
     var email = ($('#' + prefix + 'signup-email').value || '').trim();
     var pw = $('#' + prefix + 'signup-pw').value || '';
     var errEl = $('#' + prefix + 'signup-err');
@@ -426,22 +427,33 @@ function wireAuthForm(prefix, onSuccess) {
     if (pw.length < 6) {
       errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.remove('hidden'); return;
     }
+    var emailInput = $('#' + prefix + 'signup-email'), pwInput = $('#' + prefix + 'signup-pw');
+    if (emailInput) emailInput.disabled = true;
+    if (pwInput) pwInput.disabled = true;
     this.disabled = true; this.textContent = 'Creating...';
     var res = await signUp(email, pw);
+    if (emailInput) emailInput.disabled = false;
+    if (pwInput) pwInput.disabled = false;
     this.disabled = false; this.textContent = 'Create account';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
     await syncUp();
     onSuccess();
   });
   // login
-  $('#' + prefix + 'login-go').addEventListener('click', async function () {
+  var liBtn = $('#' + prefix + 'login-go');
+  if (liBtn) liBtn.addEventListener('click', async function () {
     var email = ($('#' + prefix + 'login-email').value || '').trim();
     var pw = $('#' + prefix + 'login-pw').value || '';
     var errEl = $('#' + prefix + 'login-err');
     errEl.classList.add('hidden');
     if (!email || !pw) { errEl.textContent = 'Enter email and password.'; errEl.classList.remove('hidden'); return; }
+    var emailInput = $('#' + prefix + 'login-email'), pwInput = $('#' + prefix + 'login-pw');
+    if (emailInput) emailInput.disabled = true;
+    if (pwInput) pwInput.disabled = true;
     this.disabled = true; this.textContent = 'Logging in...';
     var res = await signIn(email, pw);
+    if (emailInput) emailInput.disabled = false;
+    if (pwInput) pwInput.disabled = false;
     this.disabled = false; this.textContent = 'Log in';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
     await syncDown();
@@ -461,9 +473,21 @@ function resetAuthForms(prefix) {
   if (e2) e2.classList.add('hidden');
 }
 
-function finishOnboarding() {
+function finishOnboarding(celebrate) {
   LS.set('onboarded', true);
-  goPlan();
+  if (celebrate) { celebrateWelcome(); } else { goPlan(); }
+}
+
+// Celebratory welcome the moment the user registers via the onboarding form.
+// Mail is a promotional/notification side-channel only, so it never gates this.
+function celebrateWelcome() {
+  burst(120);
+  var flash = $('#welcome-flash');
+  if (flash) flash.classList.remove('hidden');
+  setTimeout(function () {
+    if (flash) flash.classList.add('hidden');
+    goPlan();
+  }, 1400);
 }
 
 // ---- onboarding (first boot) ----
@@ -476,8 +500,8 @@ function openOnboarding() {
 function initOnboarding() {
   if (_onbWired) { openOnboarding(); return; }
   _onbWired = true;
-  wireAuthForm('onb-', finishOnboarding);
-  $('#onb-guest').addEventListener('click', function () { finishOnboarding(); });
+  wireAuthForm('onb-', function () { finishOnboarding(true); });
+  $('#onb-guest').addEventListener('click', function () { finishOnboarding(false); });
   openOnboarding();
 }
 
