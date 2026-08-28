@@ -419,11 +419,9 @@ function finishOnboarding() {
 }
 
 function initOnboarding() {
-  var sb = isConfigured();
-  if (!sb) {
-    finishOnboarding();
-    return;
-  }
+  // Always show the onboarding screen. Guest works even without Supabase;
+  // signup/login check isConfigured() inside their handlers and show an error
+  // if the backend isn't reachable.
   // tab switching
   $$('.onb-tab').forEach(function (t) {
     t.addEventListener('click', function () {
