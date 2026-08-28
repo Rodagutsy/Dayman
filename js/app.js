@@ -12,7 +12,7 @@ import {
 } from './session.js';
 import {
   show, refreshHints, buildTasksFromInput, allocate, renderSchedule,
-  renderProgress, renderLevelBadge, renderSignin, account, renderHistory,
+  renderProgress, renderLevelBadge, account, renderHistory,
   renderRewards, renderSettings
 } from './screens.js';
 import { chime, tick as tickSfx, fanfare8bit, levelUp, breakStart, allDone } from './audio.js';
@@ -184,7 +184,6 @@ function initPlan() {
 }
 
 function goPlan() { show('plan'); refreshHints(); renderLevelBadge(); }
-function skipSignin() { goPlan(); }
 
 // ---- plan: mic (inline) ----
 var planRec = null;
@@ -280,7 +279,9 @@ $('#btn-settings-voice').addEventListener('click', function () {
   toast(muted ? 'Voice coach on' : 'Voice coach off');
 });
 $('#btn-settings-account').addEventListener('click', function () {
-  initProfile(); show('profile');
+  // signed-in users go to their Profile; guests go to the sign-in page
+  if (currentUser()) { initProfile(); show('profile'); return; }
+  initSignin(); openSignin();
 });
 $('#btn-settings-clear').addEventListener('click', function () {
   if (!confirm('Clear all data? This removes your history, badges, and settings on this device.')) return;
@@ -390,53 +391,34 @@ $('#btn-recap-done').addEventListener('click', function () {
   var a = account();
   if (!a && LS.get('signinAsked', '') !== today()) {
     LS.set('signinAsked', today());
-    renderSignin(); show('signin');
+    initSignin(); openSignin();
     return;
   }
   goPlan();
 });
 
-// ---- sign-in ----
-$('#btn-signin-skip').addEventListener('click', skipSignin);
-$('#btn-signin-skip-top').addEventListener('click', skipSignin);
-$('#btn-signin-go').addEventListener('click', function () {
-  var v = ($('#signin-email').value || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) {
-    $('#signin-err').classList.remove('hidden');
-    $('#signin-email').focus();
-    return;
-  }
-  LS.set('account', { email: v, status: 'pending', savedAt: now() });
-  toast('Saved on this device · sync pending');
-  goPlan();
-});
-$('#signin-email').addEventListener('input', function () { $('#signin-err').classList.add('hidden'); });
-
-// ---- onboarding ----
-function finishOnboarding() {
-  LS.set('onboarded', true);
-  goPlan();
-}
-
-function initOnboarding() {
-  // Always show the onboarding screen. Guest works even without Supabase;
-  // signup/login check isConfigured() inside their handlers and show an error
-  // if the backend isn't reachable.
-  // tab switching
-  $$('.onb-tab').forEach(function (t) {
+// ---- auth forms (sign-in page + onboarding) ----
+// Shared wiring for the sign up / log in tabs. prefix is the id prefix
+// ('onb-' for onboarding, 'si-' for the dedicated sign-in page). onSuccess
+// runs after a successful sign up / log in.
+function wireAuthForm(prefix, onSuccess) {
+  var tabEls = $$('.' + prefix + 'tab');
+  tabEls.forEach(function (t) {
     t.addEventListener('click', function () {
-      $$('.onb-tab').forEach(function (b) { b.classList.remove('is-on'); });
+      tabEls.forEach(function (b) { b.classList.remove('is-on'); });
       t.classList.add('is-on');
       var tab = t.dataset.tab;
-      $('#onb-form-signup').classList.toggle('hidden', tab !== 'signup');
-      $('#onb-form-login').classList.toggle('hidden', tab !== 'login');
+      var sf = $('#' + prefix + 'form-signup');
+      var lf = $('#' + prefix + 'form-login');
+      if (sf) sf.classList.toggle('hidden', tab !== 'signup');
+      if (lf) lf.classList.toggle('hidden', tab !== 'login');
     });
   });
   // signup
-  $('#onb-signup-go').addEventListener('click', async function () {
-    var email = ($('#onb-signup-email').value || '').trim();
-    var pw = $('#onb-signup-pw').value || '';
-    var errEl = $('#onb-signup-err');
+  $('#' + prefix + 'signup-go').addEventListener('click', async function () {
+    var email = ($('#' + prefix + 'signup-email').value || '').trim();
+    var pw = $('#' + prefix + 'signup-pw').value || '';
+    var errEl = $('#' + prefix + 'signup-err');
     errEl.classList.add('hidden');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       errEl.textContent = 'Please enter a valid email.'; errEl.classList.remove('hidden'); return;
@@ -449,13 +431,13 @@ function initOnboarding() {
     this.disabled = false; this.textContent = 'Create account';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
     await syncUp();
-    finishOnboarding();
+    onSuccess();
   });
   // login
-  $('#onb-login-go').addEventListener('click', async function () {
-    var email = ($('#onb-login-email').value || '').trim();
-    var pw = $('#onb-login-pw').value || '';
-    var errEl = $('#onb-login-err');
+  $('#' + prefix + 'login-go').addEventListener('click', async function () {
+    var email = ($('#' + prefix + 'login-email').value || '').trim();
+    var pw = $('#' + prefix + 'login-pw').value || '';
+    var errEl = $('#' + prefix + 'login-err');
     errEl.classList.add('hidden');
     if (!email || !pw) { errEl.textContent = 'Enter email and password.'; errEl.classList.remove('hidden'); return; }
     this.disabled = true; this.textContent = 'Logging in...';
@@ -463,11 +445,59 @@ function initOnboarding() {
     this.disabled = false; this.textContent = 'Log in';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
     await syncDown();
-    finishOnboarding();
+    onSuccess();
   });
-  // guest
-  $('#onb-guest').addEventListener('click', function () { finishOnboarding(); });
+}
+
+function resetAuthForms(prefix) {
+  $$('.' + prefix + 'tab').forEach(function (t) {
+    t.classList.toggle('is-on', t.dataset.tab === 'signup');
+  });
+  var sf = $('#' + prefix + 'form-signup'), lf = $('#' + prefix + 'form-login');
+  if (sf) sf.classList.remove('hidden');
+  if (lf) lf.classList.add('hidden');
+  var e1 = $('#' + prefix + 'signup-err'), e2 = $('#' + prefix + 'login-err');
+  if (e1) e1.classList.add('hidden');
+  if (e2) e2.classList.add('hidden');
+}
+
+function finishOnboarding() {
+  LS.set('onboarded', true);
+  goPlan();
+}
+
+// ---- onboarding (first boot) ----
+var _onbWired = false;
+function openOnboarding() {
+  resetAuthForms('onb-');
   show('onboarding');
+}
+
+function initOnboarding() {
+  if (_onbWired) { openOnboarding(); return; }
+  _onbWired = true;
+  wireAuthForm('onb-', finishOnboarding);
+  $('#onb-guest').addEventListener('click', function () { finishOnboarding(); });
+  openOnboarding();
+}
+
+// ---- dedicated sign-in page (from Settings / recap) ----
+var _siWired = false;
+function openSignin() {
+  resetAuthForms('si-');
+  show('signin');
+}
+
+function initSignin() {
+  if (_siWired) return;
+  _siWired = true;
+  wireAuthForm('si-', function () {
+    renderSettings();
+    show('settings');
+  });
+  $('#si-back').addEventListener('click', function () {
+    renderSettings(); show('settings');
+  });
 }
 
 // ---- profile ----

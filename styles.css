@@ -761,11 +761,11 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); backgr
   display: flex; gap: 0; background: var(--surface); border: 2px solid var(--line);
   border-radius: 999px; padding: 3px; margin-bottom: 20px; width: 100%; max-width: 300px;
 }
-.onb-tab {
+.onb-tab, .si-tab {
   flex: 1; padding: 10px; border-radius: 999px; font-size: 14px; font-weight: 700;
   color: var(--ink-2); transition: background var(--t), color var(--t); text-align: center;
 }
-.onb-tab.is-on { background: var(--accent); color: #fff }
+.onb-tab.is-on, .si-tab.is-on { background: var(--accent); color: #fff }
 .onb-form { width: 100%; max-width: 300px; text-align: left; display: flex; flex-direction: column }
 .onb-form.hidden { display: none }
 .onb-form .label { margin-bottom: 6px }

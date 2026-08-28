@@ -284,28 +284,40 @@
     </div>
   </section>
 
-  <!-- ============ SIGN IN ============ -->
+  <!-- ============ SIGN IN / SIGN UP ============ -->
   <section class="screen hidden" id="screen-signin" data-screen="signin">
     <header class="top">
-      <div class="top-title">Save your progress</div>
-      <button class="link" id="btn-signin-skip-top">Not now</button>
+      <button class="link" id="si-back">Back</button>
+      <div class="top-title">Sign in</div>
+      <span>&nbsp;</span>
     </header>
-    <div class="body">
-      <h1 class="q">Keep your streak, badges and rank safe.</h1>
-      <p class="sub">Add an email and your days, XP, levels, and badges travel with you across devices.</p>
-      <div class="si-stats" id="si-stats"></div>
-      <label class="label" for="signin-email">Email</label>
-      <input type="email" id="signin-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
-      <p class="si-err hidden" id="signin-err">That doesn't look like an email &mdash; try again.</p>
-      <p class="si-note">Saved on this device only for now. Sync is coming &mdash; nothing is sent anywhere yet.</p>
+    <div class="body onboarding-body">
+      <div class="onb-tabs">
+        <button class="si-tab is-on" id="si-tab-signup" data-tab="signup">Sign up</button>
+        <button class="si-tab" id="si-tab-login" data-tab="login">Log in</button>
+      </div>
+
+      <div class="onb-form" id="si-form-signup">
+        <label class="label" for="si-signup-email">Email</label>
+        <input type="email" id="si-signup-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        <label class="label" for="si-signup-pw">Password</label>
+        <input type="password" id="si-signup-pw" autocomplete="new-password" placeholder="At least 6 characters">
+        <p class="onb-err hidden" id="si-signup-err"></p>
+        <button class="btn primary" id="si-signup-go">Create account</button>
+      </div>
+
+      <div class="onb-form hidden" id="si-form-login">
+        <label class="label" for="si-login-email">Email</label>
+        <input type="email" id="si-login-email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+        <label class="label" for="si-login-pw">Password</label>
+        <input type="password" id="si-login-pw" autocomplete="current-password" placeholder="Your password">
+        <p class="onb-err hidden" id="si-login-err"></p>
+        <button class="btn primary" id="si-login-go">Log in</button>
+      </div>
     </div>
-    <footer class="dock">
-      <button class="btn primary" id="btn-signin-go">Continue</button>
-      <button class="link center-link" id="btn-signin-skip">Not now</button>
-    </footer>
   </section>
 
-  <!-- ============ ONBOARDING ============ -->
+  <!-- ============ ONBOARDING (login / sign up) ============ -->
   <section class="screen hidden" id="screen-onboarding" data-screen="onboarding">
     <header class="top">
       <span>&nbsp;</span>

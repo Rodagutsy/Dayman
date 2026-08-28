@@ -755,21 +755,8 @@ export function renderLevelBadge() {
   }
 }
 
-// ---- sign-in ----
+// ---- account ----
 export function account() { return LS.get('account', null); }
-
-export function renderSignin() {
-  var h = history(), xp = totalXp(h), st = streakOf(h);
-  var box = $('#si-stats'); box.innerHTML = '';
-  box.appendChild(statRow([
-    { v: String(xp), l: 'XP' },
-    { v: String(st), l: 'day streak' },
-    { v: earnedBadges(h).length + '/' + BADGES.length, l: 'badges' }
-  ]));
-  $('#signin-err').classList.add('hidden');
-  var a = account();
-  $('#signin-email').value = (a && a.email) || '';
-}
 
 // ---- history ----
 export function renderHistory() {
