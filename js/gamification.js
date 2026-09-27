@@ -3,10 +3,12 @@
 import { pad, now, today, LS } from './utils.js';
 import { history } from './state.js';
 
+/* XP is earned for time actually spent, not for tapping Done:
+   1 XP per focused minute + 5 XP per fully completed focus block + a streak
+   bonus. Tapping Done early therefore earns nothing beyond the time banked. */
 var XP = {
-  PER_TASK: 10,
   PER_MINUTE: 1,
-  ALL_DONE_BONUS: 25,
+  PER_BLOCK: 5,
   STREAK_PER_DAY: 5,
   STREAK_CAP: 50
 };
@@ -15,23 +17,18 @@ export function xpForDay(rec, streakDays) {
   var tasks = rec.tasks || [];
   var completed = tasks.filter(isDone).length;
   var minutes = Math.max(0, Math.round(rec.focus || 0));
+  var blocks = Math.max(0, Math.round(rec.blocksDone || 0));
   var parts = [];
-  var taskXp = completed * XP.PER_TASK;
   var minXp = minutes * XP.PER_MINUTE;
-  parts.push({ label: completed + ' task' + (completed === 1 ? '' : 's') + ' completed', xp: taskXp });
+  var blockXp = blocks * XP.PER_BLOCK;
   parts.push({ label: minutes + ' focused minute' + (minutes === 1 ? '' : 's'), xp: minXp });
-  var bonus = 0;
-  if (tasks.length && completed === tasks.length) {
-    bonus = XP.ALL_DONE_BONUS;
-    parts.push({ label: 'Completed every task', xp: bonus });
-  }
+  if (blocks) parts.push({ label: blocks + ' block' + (blocks === 1 ? '' : 's') + ' completed', xp: blockXp });
   var streakXp = 0;
   if (completed > 0 && streakDays > 0) {
     streakXp = Math.min(XP.STREAK_CAP, streakDays * XP.STREAK_PER_DAY);
     parts.push({ label: streakDays + '-day streak bonus', xp: streakXp });
   }
-  var total = taskXp + minXp + bonus + streakXp;
-  return { total: total, parts: parts };
+  return { total: minXp + blockXp + streakXp, parts: parts };
 }
 
 function isDone(t) {
@@ -83,11 +80,12 @@ export function streakAtRisk(h) {
   return new Date(now()).getHours() >= 17;
 }
 
+/* Stage 2 is 100 XP away, every stage after that is 200 XP. */
 var TIERS = [
-  { xp: 0, name: 'Spark' }, { xp: 120, name: 'Ember' }, { xp: 300, name: 'Steady' },
-  { xp: 600, name: 'Focused' }, { xp: 1000, name: 'Deep Work' }, { xp: 1600, name: 'Relentless' },
-  { xp: 2400, name: 'Craftsman' }, { xp: 3500, name: 'Operator' }, { xp: 5000, name: 'Luminary' },
-  { xp: 7000, name: 'Timekeeper' }
+  { xp: 0, name: 'Spark' }, { xp: 100, name: 'Ember' }, { xp: 300, name: 'Steady' },
+  { xp: 500, name: 'Focused' }, { xp: 700, name: 'Deep Work' }, { xp: 900, name: 'Relentless' },
+  { xp: 1100, name: 'Craftsman' }, { xp: 1300, name: 'Operator' }, { xp: 1500, name: 'Luminary' },
+  { xp: 1700, name: 'Timekeeper' }
 ];
 
 export function totalXp(h) {

@@ -6,20 +6,26 @@ import { parseTasks, parseReply } from './parsing.js';
 import { speak, unlockAudio, listen, speechLog, getMuted, setMuted } from './speech.js';
 import { xpForDay, totalXp, levelOf, streakOf, earnedBadges, shiftIso } from './gamification.js';
 import {
-  startSession, saveSession, tick, curBlock, creditFocus, advance, prune,
+  startSession, saveSession, tick, curBlock, creditFocus, advance,
   moreTimeNow, remaining, renderSession, decide, showDecision,
-  cancelAuto, autoSecsLeft, blockEnded
+  cancelAuto, autoSecsLeft, blockEnded, togglePause, markBlockDone, rebaseClock
 } from './session.js';
 import {
   show, refreshHints, buildTasksFromInput, allocate, renderSchedule,
   renderProgress, renderLevelBadge, account, renderHistory,
-  renderRewards, renderSettings
+  renderRewards, renderSettings, renderLastPlan, shuffleTasks, cancelPlan
 } from './screens.js';
 import { chime, tick as tickSfx, fanfare8bit, levelUp, breakStart, allDone } from './audio.js';
 import { burst, xpFloat, levelUpFlash, showScanlines, hideScanlines } from './confetti.js';
 import { runSplash } from './splash.js';
-import { initAuth, signUp, signIn, signOut, currentUser, isConfigured, updateProfile, deleteAccount } from './auth.js';
+import {
+  initAuth, signUp, signIn, signOut, currentUser, isConfigured,
+  deleteAccount, changePassword, resendConfirmation
+} from './auth.js';
 import { syncUp, syncDown, exportData } from './sync.js';
+import { initInstall } from './install.js';
+import { displayName, avatarInitial, setDisplayName, onIdentityChange, ensureIdentity, resetIdentity } from './identity.js';
+import { titleCase } from './utils.js';
 
 // ---- plan init ----
 var timeInteracted = false;
@@ -51,11 +57,12 @@ function checkReveal() {
 }
 
 var TIME_PRESETS = [
-  { label: '1 hr', min: 60 },
-  { label: '2 hr', min: 120 },
-  { label: '3 hr', min: 180 },
-  { label: '4 hr', min: 240 },
-  { label: '6 hr', min: 360 }
+  { label: '1h', min: 60 },
+  { label: '2h', min: 120 },
+  { label: '4h', min: 240 },
+  { label: '6h', min: 360 },
+  { label: '12h', min: 720 },
+  { label: '24h', min: 1440 }
 ];
 
 function initTimeChips() {
@@ -149,6 +156,22 @@ function selectTech(id) {
   saveDraft();
 }
 
+function paintIdentity() {
+  var name = displayName();
+  var nameEl = $('#plan-username');
+  var avatarEl = $('#plan-avatar');
+  var welcomeName = $('#welcome-name');
+  if (nameEl) nameEl.textContent = name;
+  if (avatarEl) avatarEl.textContent = avatarInitial();
+  if (welcomeName) welcomeName.textContent = name;
+  var pName = $('#profile-name');
+  if (pName) pName.textContent = name;
+  var pAvatar = $('#profile-avatar');
+  if (pAvatar) pAvatar.textContent = avatarInitial();
+  var sName = $('#settings-username');
+  if (sName) sName.textContent = name;
+}
+
 function initPlan() {
   var d = LS.get('draft', null);
   if (d && d.plan) {
@@ -159,15 +182,8 @@ function initPlan() {
   // greeting
   var greetEl = $('#greeting');
   if (greetEl) greetEl.textContent = getGreeting();
-  // avatar + username
-  var a = account();
-  var profile = LS.get('profile', null);
-  var displayName = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'You');
-  displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-  var avatarEl = $('#plan-avatar');
-  var nameEl = $('#plan-username');
-  if (nameEl) nameEl.textContent = displayName;
-  if (avatarEl) avatarEl.textContent = displayName.charAt(0).toUpperCase();
+  // avatar + username come from the single identity source
+  paintIdentity();
   // level badge
   renderLevelBadge();
   $('#lvl-badge').addEventListener('click', function () {
@@ -179,11 +195,18 @@ function initPlan() {
   // tech list
   initTechList();
   $('#tech-custom').classList.toggle('hidden', plan.tech !== 'custom');
+  renderLastPlan();
   refreshHints();
   checkReveal();
 }
 
-function goPlan() { show('plan'); refreshHints(); renderLevelBadge(); }
+function goPlan() {
+  show('plan');
+  refreshHints();
+  renderLevelBadge();
+  renderLastPlan();
+  paintIdentity();
+}
 
 // ---- plan: mic (inline) ----
 var planRec = null;
@@ -233,10 +256,32 @@ $('#btn-map').addEventListener('click', function () {
   buildTasksFromInput();
   if (!plan.tasks.length) { toast('Add a task first'); $('#tasks-input').focus(); return; }
   allocate();
-  renderSchedule();
+  renderSchedule(true);
   show('schedule');
 });
 $('#btn-back-plan').addEventListener('click', function () { goPlan(); });
+
+// ---- schedule tools: shuffle the order, or throw the plan away ----
+$('#btn-rearrange').addEventListener('click', function () {
+  if (!plan.tasks.length) return;
+  if (shuffleTasks()) {
+    allocate();
+    renderSchedule();
+    toast('New order');
+    speak('Rearranged your day.', { interrupt: true });
+  }
+});
+function askCancelPlan() {
+  if (!plan.tasks.length) return false;
+  return confirm('Cancel this plan? Your tasks and time budget are cleared.');
+}
+$('#btn-cancel-plan-top').addEventListener('click', function () {
+  if (!askCancelPlan()) return;
+  cancelPlan();
+  renderSchedule(true);
+  goPlan();
+  toast('Plan cancelled');
+});
 
 // ---- wizard card collapse/expand ----
 $('#reveal-time .label').addEventListener('click', function () {
@@ -295,15 +340,9 @@ $('#btn-settings-clear').addEventListener('click', function () {
 $('#btn-pause').addEventListener('click', function () {
   var session = getSession();
   if (!session) return;
-  if (session.paused) {
-    session.endAt = now() + session.pausedRemain; session.paused = false;
-    speak('Resuming.', { interrupt: true });
-  } else {
-    session.pausedRemain = Math.max(0, remaining()); session.paused = true;
-    speak('Paused.', { interrupt: true });
-  }
-  renderSession();
-  saveSession();
+  if (!session.paused) speak('Paused.', { interrupt: true });
+  else speak('Resuming.', { interrupt: true });
+  togglePause();
 });
 $('#btn-skip').addEventListener('click', function () {
   var session = getSession();
@@ -318,14 +357,13 @@ $('#btn-done').addEventListener('click', function () {
   if (!session) return;
   var b = curBlock();
   creditFocus();
-  if (b.type === 'focus') {
-    session.done = session.done || {};
-    session.done[b.taskId] = true;
-    session.blocks = session.blocks.filter(function (x, i) {
-      return i <= session.idx || !(x.type === 'focus' && x.taskId === b.taskId);
-    });
-    prune();
-    speak(b.name + ' done. Nice.', { interrupt: true });
+  if (b && b.type === 'focus') {
+    // Done closes THIS block only — the rest of the plan still runs.
+    markBlockDone();
+    var left = (session.taskBlocksTotal[b.taskId] || 1) - (session.taskBlocksDone[b.taskId] || 0);
+    speak(session.done[b.taskId]
+      ? titleCase(b.name) + ' done. All its blocks are done. Nice.'
+      : titleCase(b.name) + ' block done. ' + left + ' to go.', { interrupt: true });
   }
   advance();
 });
@@ -340,6 +378,16 @@ $('#btn-quit').addEventListener('click', function () {
   if (!session) { show('plan'); return; }
   creditFocus();
   import('./screens.js').then(function (m) { m.finishDay(); });
+});
+// Cancel the rest of the day: bank the real time worked, keep the record.
+$('#btn-cancel-plan').addEventListener('click', function () {
+  var session = getSession();
+  if (!session) return;
+  if (!confirm('Stop for today? Time you have focused is saved and the rest of the plan is dropped.')) return;
+  creditFocus();
+  var cb = curBlock();
+  if (cb && cb.type === 'focus') markBlockDone();
+  import('./screens.js').then(function (m) { m.finishDay({ cancelled: true }); });
 });
 
 // ---- decision buttons ----
@@ -396,11 +444,26 @@ $('#btn-recap-done').addEventListener('click', function () {
   }
   goPlan();
 });
+// Re-run the plan: same tasks, fresh budget allocation.
+$('#btn-recap-again').addEventListener('click', function () {
+  setSession(null);
+  var h = history();
+  var dates = Object.keys(h).sort();
+  var rec = dates.length ? h[dates[dates.length - 1]] : null;
+  var names = rec && rec.tasks ? rec.tasks.map(function (t) { return t.name; }) : [];
+  if (names.length) {
+    var input = $('#tasks-input');
+    if (input) { input.value = names.join(', '); LS.set('lastInput', input.value); }
+  }
+  goPlan();
+  checkReveal();
+  toast('Your tasks are ready again');
+});
 
 // ---- auth forms (sign-in page + onboarding) ----
 // Shared wiring for the sign up / log in tabs. prefix is the id prefix
 // ('onb-' for onboarding, 'si-' for the dedicated sign-in page). onSuccess
-// runs after a successful sign up / log in.
+// runs after a successful sign up / log in and is told which one it was.
 function wireAuthForm(prefix, onSuccess) {
   var tabEls = $$('.' + prefix + 'tab');
   tabEls.forEach(function (t) {
@@ -436,8 +499,14 @@ function wireAuthForm(prefix, onSuccess) {
     if (pwInput) pwInput.disabled = false;
     this.disabled = false; this.textContent = 'Create account';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
+    if (res.needsConfirm) {
+      // No session yet: Supabase emails a confirmation link first.
+      showConfirmNotice(prefix, res.email || email);
+      return;
+    }
+    await ensureIdentity();
     await syncUp();
-    onSuccess();
+    onSuccess('signup', email);
   });
   // login
   var liBtn = $('#' + prefix + 'login-go');
@@ -456,8 +525,27 @@ function wireAuthForm(prefix, onSuccess) {
     if (pwInput) pwInput.disabled = false;
     this.disabled = false; this.textContent = 'Log in';
     if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
+    await ensureIdentity();
     await syncDown();
-    onSuccess();
+    onSuccess('login', email);
+  });
+}
+
+// "Check your inbox" state for a signup that still needs email confirmation.
+function showConfirmNotice(prefix, email) {
+  var errEl = $('#' + prefix + 'signup-err');
+  if (!errEl) return;
+  errEl.classList.remove('hidden');
+  errEl.innerHTML = 'Almost there — check <strong>' + (email || 'your inbox') + '</strong> for the confirmation link, ' +
+    'then log in. <button type="button" class="linkbtn" id="' + prefix + 'resend">Resend email</button>';
+  var btn = document.getElementById(prefix + 'resend');
+  if (!btn) return;
+  btn.addEventListener('click', async function () {
+    this.disabled = true; this.textContent = 'Sending...';
+    var res = await resendConfirmation(email);
+    this.disabled = false;
+    this.textContent = res.error ? 'Try again' : 'Sent!';
+    if (!res.error) toast('Confirmation email sent');
   });
 }
 
@@ -473,22 +561,67 @@ function resetAuthForms(prefix) {
   if (e2) e2.classList.add('hidden');
 }
 
-function finishOnboarding(celebrate) {
+function finishOnboarding(celebrate, email) {
   LS.set('onboarded', true);
-  if (celebrate) { celebrateWelcome(); } else { goPlan(); }
+  if (celebrate) { celebrateWelcome(email); } else { goPlan(); }
 }
 
-// Celebratory welcome the moment the user registers via the onboarding form.
-// Mail is a promotional/notification side-channel only, so it never gates this.
-function celebrateWelcome() {
-  burst(120);
-  var flash = $('#welcome-flash');
-  if (flash) flash.classList.remove('hidden');
-  setTimeout(function () {
-    if (flash) flash.classList.add('hidden');
-    goPlan();
-  }, 1400);
+/* New account: congrats page with fanfare, then straight into the planner. */
+var _welcomeTimer = null;
+var _welcomeLeft = 5;
+var _welcomeShowing = false;
+
+function leaveWelcome() {
+  if (_welcomeTimer) { clearInterval(_welcomeTimer); _welcomeTimer = null; }
+  _welcomeShowing = false;
+  _welcomeLeft = 5;
+  hideScanlines();
+  goPlan();
 }
+
+/* The welcome belongs to the account, not the device, so a second account made
+   on the same device still gets its own welcome page. */
+function welcomedKey() {
+  var u = currentUser();
+  return 'welcomed:' + (u && u.id ? u.id : 'guest');
+}
+function hasWelcomed() {
+  return LS.get(welcomedKey(), false);
+}
+
+function celebrateWelcome(email) {
+  var screen = $('#screen-welcome');
+  LS.set(welcomedKey(), true);
+  if (_welcomeShowing) return; // already on screen
+  if (screen) {
+    paintIdentity();
+    _welcomeShowing = true;
+    _welcomeLeft = 5;
+    show('welcome');
+    burst(160);
+    fanfare8bit();
+    var mail = $('#welcome-mail-line');
+    if (mail) {
+      mail.textContent = email
+        ? 'Confirm ' + email + ' from the email we sent, then log back in to sync.'
+        : '';
+    }
+    speak('Welcome to Dayman, ' + displayName() + '. Your username is ready — change it any time in settings.', { interrupt: true });
+  }
+  if (_welcomeTimer) clearInterval(_welcomeTimer);
+  _welcomeTimer = setInterval(function () {
+    _welcomeLeft--;
+    var el = $('#welcome-count');
+    if (_welcomeLeft <= 0) { leaveWelcome(); return; }
+    if (el) el.textContent = 'Taking you home in ' + _welcomeLeft + 's';
+  }, 1000);
+}
+$('#welcome-skip').addEventListener('click', leaveWelcome);
+$('#welcome-plan').addEventListener('click', function () {
+  var input = $('#tasks-input');
+  if (input) input.focus();
+  leaveWelcome();
+});
 
 // ---- onboarding (first boot) ----
 var _onbWired = false;
@@ -500,7 +633,10 @@ function openOnboarding() {
 function initOnboarding() {
   if (_onbWired) { openOnboarding(); return; }
   _onbWired = true;
-  wireAuthForm('onb-', function () { finishOnboarding(true); });
+  wireAuthForm('onb-', function (how, email) {
+    if (how === 'signup') finishOnboarding(true, email);
+    else { LS.set('onboarded', true); firstLogin(how, email); }
+  });
   $('#onb-guest').addEventListener('click', function () { finishOnboarding(false); });
   openOnboarding();
 }
@@ -515,43 +651,75 @@ function openSignin() {
 function initSignin() {
   if (_siWired) return;
   _siWired = true;
-  wireAuthForm('si-', function () {
-    renderSettings();
-    show('settings');
+  wireAuthForm('si-', function (how, email) {
+    firstLogin(how, email);
   });
   $('#si-back').addEventListener('click', function () {
     renderSettings(); show('settings');
   });
 }
 
+/* A first-ever sign-in still gets the congratulations page — that is the moment
+   a confirmed email becomes a real account. Later visits go straight in. */
+function firstLogin(how, email) {
+  paintIdentity();
+  if (!hasWelcomed()) { celebrateWelcome(email); return; }
+  if (how === 'login') { renderSettings(); show('settings'); return; }
+  goPlan();
+}
+
 // ---- profile ----
 function initProfile() {
   var u = currentUser();
   var a = account();
-  var profile = LS.get('profile', null);
-  var name = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'Guest');
-  var initial = name.charAt(0).toUpperCase();
-  $('#profile-avatar').textContent = initial;
+  var name = displayName();
+  $('#profile-avatar').textContent = avatarInitial();
   $('#profile-name').textContent = name;
   $('#profile-email').textContent = u ? u.email : (a ? a.email : 'Guest mode');
   $('#profile-email-desc').textContent = u ? u.email : 'No account linked';
-  $('#profile-name-input').value = profile && profile.name ? profile.name : '';
-  // save name
-  $('#profile-name-input').addEventListener('change', async function () {
-    var v = this.value.trim();
-    if (!v) return;
-    var p = LS.get('profile', {}); p.name = v; LS.set('profile', p);
-    if (u) await updateProfile({ display_name: v });
-    toast('Name updated');
-    renderProfileDisplay();
-  });
-  // change email (placeholder)
-  $('#btn-profile-change-email').addEventListener('click', function () {
-    toast('Email change coming soon');
-  });
+  var nameInput = $('#profile-name-input');
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.addEventListener('change', function () {
+      var v = this.value.trim();
+      if (!v) { this.value = displayName(); return; }
+      if (!setDisplayName(v)) { this.value = displayName(); return; }
+      toast('Name updated everywhere');
+      this.value = displayName();
+    });
+  }
+  // change email (not available yet)
+  var ce = $('#btn-profile-change-email');
+  if (ce) ce.addEventListener('click', function () { toast('Email change coming soon'); });
   // change password
-  $('#btn-profile-change-pw').addEventListener('click', function () {
-    toast('Password change coming soon');
+  var pwBtn = $('#btn-pw-save');
+  if (pwBtn) {
+    pwBtn.addEventListener('click', async function () {
+      if (!u) { toast('Log in to change your password'); return; }
+      var cur = $('#pw-current').value || '';
+      var nw = $('#pw-new').value || '';
+      var cf = $('#pw-confirm').value || '';
+      var err = $('#pw-err');
+      err.classList.add('hidden');
+      if (!cur) { err.textContent = 'Enter your current password.'; err.classList.remove('hidden'); return; }
+      if (nw.length < 6) { err.textContent = 'New password must be at least 6 characters.'; err.classList.remove('hidden'); return; }
+      if (nw !== cf) { err.textContent = 'The new passwords do not match.'; err.classList.remove('hidden'); return; }
+      this.disabled = true; this.textContent = 'Saving...';
+      var res = await changePassword(cur, nw);
+      this.disabled = false; this.textContent = 'Change Password';
+      if (res.error) { err.textContent = res.error; err.classList.remove('hidden'); return; }
+      $('#pw-current').value = ''; $('#pw-new').value = ''; $('#pw-confirm').value = '';
+      toast('Password updated');
+      speak('Password updated.', { interrupt: true });
+    });
+  }
+  var legacyPw = $('#btn-profile-change-pw');
+  if (legacyPw) legacyPw.addEventListener('click', function () {
+    var form = $('#profile-pw-form');
+    if (!form) return;
+    var open = form.classList.toggle('hidden');
+    if (!open) { var f = $('#pw-current'); if (f) f.focus(); }
+    this.textContent = open ? 'Change' : 'Close';
   });
   // export
   $('#btn-profile-export').addEventListener('click', function () {
@@ -563,6 +731,7 @@ function initProfile() {
     if (!confirm('Sign out? Your data stays on this device.')) return;
     await syncUp();
     await signOut();
+    resetIdentity();
     toast('Signed out');
     renderSettings();
     goPlan();
@@ -574,22 +743,21 @@ function initProfile() {
     var res = await deleteAccount();
     if (res.error) { toast('Delete failed: ' + res.error); return; }
     clearAppData();
+    resetIdentity();
     toast('Server data deleted. Email account remains — contact support to fully remove.');
     goPlan();
   });
 }
 
-function renderProfileDisplay() {
-  var u = currentUser();
-  var a = account();
-  var profile = LS.get('profile', null);
-  var name = (profile && profile.name) || (a && a.email ? a.email.split('@')[0] : 'Guest');
-  $('#profile-avatar').textContent = name.charAt(0).toUpperCase();
-  $('#profile-name').textContent = name;
-  if ($('#profile-name-input')) $('#profile-name-input').value = profile && profile.name ? profile.name : '';
-}
+function renderProfileDisplay() { paintIdentity(); }
 
 $('#btn-profile-back').addEventListener('click', function () { renderSettings(); show('settings'); });
+
+// Rename anywhere propagates to every surface.
+onIdentityChange(function () {
+  paintIdentity();
+  renderSettings();
+});
 
 // ---- any interaction cancels auto-advance ----
 ['pointerdown', 'keydown'].forEach(function (ev) {
@@ -606,6 +774,8 @@ $('#btn-profile-back').addEventListener('click', function () { renderSettings();
       s.date !== today() || s.idx >= s.blocks.length) { LS.set('session', null); return; }
   setSession(s);
   show('session');
+  // Time with the app closed is not focus time: rebase before anything reads it.
+  rebaseClock();
   renderSession();
   startTick(tick);
   var r = remaining();
@@ -622,10 +792,13 @@ $('#btn-profile-back').addEventListener('click', function () { renderSettings();
   async function afterSplash() {
     initPlan();
     await initAuth().catch(function () {});
+    await ensureIdentity();
+    initInstall();
     if (!onboarded) {
       initOnboarding();
     } else {
       if (currentUser()) { await syncDown().catch(function () {}); }
+      paintIdentity();
       show('plan');
     }
   }
@@ -634,6 +807,8 @@ $('#btn-profile-back').addEventListener('click', function () { renderSettings();
     var splashEl = document.getElementById('splash');
     if (splashEl) splashEl.style.display = 'none';
     initPlan();
+    ensureIdentity();
+    initInstall();
   } else {
     runSplash(function () {
       afterSplash();
@@ -680,7 +855,13 @@ window.__ds = {
   badges: function () { return earnedBadges(); },
   history: history,
   account: account,
-  refresh: function () { renderLevelBadge(); },
+  refresh: function () { renderLevelBadge(); renderLastPlan(); paintIdentity(); },
+  displayName: function () { return displayName(); },
+  setName: function (n) { return setDisplayName(n); },
+  breakReserve: function (min, tech) { return import('./screens.js').then(function (m) { return m.breakReserve(min, tech); }); },
+  finishDay: function (opts) { return import('./screens.js').then(function (m) { m.finishDay(opts); }); },
+  cancelPlan: function () { cancelPlan(); },
+  renderSchedule: function (reset) { renderSchedule(!!reset); },
   seedDemo: function () {
     var h = history();
     var recipe = [
@@ -703,7 +884,12 @@ window.__ds = {
         date: iso, tasks: tasks, seed: true, startHour: r[2],
         focus: tasks.reduce(function (a, t) { return a + t.actual; }, 0),
         ext: tasks.reduce(function (a, t) { return a + t.ext; }, 0),
-        longest: tasks.reduce(function (a, t) { return Math.max(a, t.actual); }, 0)
+        longest: tasks.reduce(function (a, t) { return Math.max(a, t.actual); }, 0),
+        // finished blocks in ~25 min chunks, matching the new XP formula
+        blocksDone: tasks.reduce(function (a, t) {
+          return a + (t.done ? Math.max(1, Math.round(t.actual / 25)) : 0);
+        }, 0),
+        sessions: 1
       };
     });
     LS.set('history', h);

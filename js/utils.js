@@ -32,9 +32,8 @@ export function now() { return Date.now() + warp; }
 export function pad(n) { return (n < 10 ? '0' : '') + n; }
 
 export function clockOf(ms) {
-  var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
-  var ap = h >= 12 ? 'pm' : 'am', hh = h % 12; if (hh === 0) hh = 12;
-  return hh + ':' + pad(m) + ' ' + ap;
+  var d = new Date(ms);
+  return pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
 export function mmss(ms) {
@@ -63,6 +62,15 @@ export function prettyDate(iso) {
 }
 
 export function uid() { return Math.random().toString(36).slice(2, 9); }
+
+// Capitalises the first letter of every word. The rest of each word is left
+// exactly as typed, so intentional casing survives (SEO, API, iPhone, eBay).
+export function titleCase(text) {
+  if (!text) return '';
+  return String(text).replace(/(^|[\s\-–—(/])([^\s\-–—/)]+)/g, function (m, pre, w) {
+    return pre + w.charAt(0).toUpperCase() + w.slice(1);
+  });
+}
 
 var toastT;
 export function toast(msg) {

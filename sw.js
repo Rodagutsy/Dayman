@@ -1,5 +1,5 @@
 /* Dayman service worker — cache the shell, serve offline. */
-var CACHE = 'dayman-v6';
+var CACHE = 'dayman-v9';
 var SHELL = [
   './',
   './index.html',
@@ -17,7 +17,10 @@ var SHELL = [
   './js/confetti.js',
   './js/splash.js',
   './js/supabase.js',
+  './js/supabase-config.js',
   './js/auth.js',
+  './js/identity.js',
+  './js/install.js',
   './js/sync.js',
   './js/notify.js',
   './js/leaderboard.js',

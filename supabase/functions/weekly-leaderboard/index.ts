@@ -60,15 +60,17 @@ function streakOf(history: Record<string, any>, endIso: string): number {
   return n;
 }
 
+/* 1 XP per focused minute + 5 XP per fully completed focus block + streak
+   bonus. Mirrors xpForDay() in js/gamification.js. */
 function xpForDay(rec: any, streakDays: number): number {
   const tasks = rec?.tasks || [];
   const completed = tasks.filter(isDone).length;
   const minutes = Math.max(0, Math.round(rec.focus || 0));
-  const taskXp = completed * 10;
+  const blocks = Math.max(0, Math.round(rec.blocksDone || 0));
   const minXp = minutes * 1;
-  const bonus = tasks.length > 0 && completed === tasks.length ? 25 : 0;
+  const blockXp = blocks * 5;
   const streakXp = completed > 0 && streakDays > 0 ? Math.min(50, streakDays * 5) : 0;
-  return taskXp + minXp + bonus + streakXp;
+  return minXp + blockXp + streakXp;
 }
 
 function computeWeeklyStats(history: Record<string, any>, weekStart: string) {

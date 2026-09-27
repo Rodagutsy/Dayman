@@ -1,4 +1,7 @@
-/* Dayman — task and reply parsing. Pure functions, zero imports. */
+/* Dayman — task and reply parsing. Pure functions; only dependency is the
+   shared title-case text helper. */
+
+import { titleCase } from './utils.js';
 
 export function parseTasks(raw) {
   if (!raw) return [];
@@ -24,11 +27,13 @@ export function durationHint(text) {
 }
 
 export function cleanName(text) {
-  return text
+  var s = text
     .replace(/[-–—(]?\s*\d+(?:\.\d+)?\s*(hours|hour|hrs|hr|h|minutes|minute|mins|min|m)\b\)?/i, '')
     .replace(/\s{2,}/g, ' ')
     .replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '')
-    .trim() || text.trim();
+    .trim();
+  if (!s) s = (text || '').trim();
+  return titleCase(s);
 }
 
 var WORDNUM = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, fourty: 40, forty: 40, fifty: 50, sixty: 60 };

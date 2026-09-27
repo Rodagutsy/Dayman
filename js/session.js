@@ -83,10 +83,11 @@ export function renderSession() {
 function enterBlock(first) {
   var session = getSession();
   var b = curBlock();
-  if (!b) { _finishDayFn && _finishDayFn(); return; }
+  if (!b) { _finishDayFn && _finishDayFn({ cancelled: true }); return; }
   session.endAt = now() + b.min * 60000;
   session.paused = false; session.pausedRemain = 0; session.awaiting = false;
   session.spoke = {};
+  b.runStart = now(); b.runMs = 0; b.bankedMs = 0;
   hideDecision();
   renderSession();
   if (b.type === 'focus') {
@@ -99,6 +100,31 @@ function enterBlock(first) {
       : 'Nice work. Take ' + b.min + ' — stand up, look away from the screen.', { interrupt: true });
   }
   saveSession();
+}
+
+// Pause/resume keep the focus clock honest: paused time is never credited.
+export function togglePause() {
+  var session = getSession();
+  if (!session) return;
+  var b = curBlock();
+  if (session.paused) {
+    session.endAt = now() + session.pausedRemain; session.paused = false;
+    if (b) b.runStart = now();
+  } else {
+    session.pausedRemain = Math.max(0, remaining()); session.paused = true;
+    if (b && b.runStart) { b.runMs = (b.runMs || 0) + Math.max(0, now() - b.runStart); b.runStart = null; }
+  }
+  renderSession();
+  saveSession();
+}
+
+/* Paused/resumed time is not focus time, and neither is time the app spent
+   closed: this rebases a block's clock to now, keeping only banked focus. */
+export function rebaseClock() {
+  var b = curBlock();
+  if (!b || b.type !== 'focus') return;
+  b.runMs = b.bankedMs || 0;
+  b.runStart = now();
 }
 
 export function startSession() {
@@ -118,6 +144,9 @@ export function startSession() {
     done: {},
     planned: {},
     names: {},
+    blocksDone: 0,
+    taskBlocksTotal: {},
+    taskBlocksDone: {},
     startedAt: now(),
     startHour: new Date(now()).getHours(),
     longestMs: 0,
@@ -125,6 +154,11 @@ export function startSession() {
   };
   plan.tasks.forEach(function (t) {
     session.planned[t.id] = t.alloc; session.actualMs[t.id] = 0; session.ext[t.id] = 0; session.names[t.id] = t.name;
+  });
+  // remember how many focus blocks each task owns so "done" means all of them ran
+  blocks.forEach(function (b) {
+    if (b.type !== 'focus') return;
+    session.taskBlocksTotal[b.taskId] = (session.taskBlocksTotal[b.taskId] || 0) + 1;
   });
   setSession(session);
   _showFn && _showFn('session');
@@ -229,15 +263,43 @@ export function blockEnded() {
   }
 }
 
+/* Banks the focus time actually spent on the current block. Safe to call
+   repeatedly: only the delta since the last bank is credited, so extensions
+   ("+5 min") and pauses never inflate the recorded time. */
 export function creditFocus() {
   var session = getSession();
-  var b = curBlock(); if (!b || b.type !== 'focus') return;
-  var total = Math.max(0, (b.min * 60000) - Math.max(0, remaining()));
-  var delta = Math.max(0, total - (b.creditedMs || 0));
-  b.creditedMs = total;
-  session.actualMs[b.taskId] = (session.actualMs[b.taskId] || 0) + delta;
-  session.focusMs += delta;
-  if (total > (session.longestMs || 0)) session.longestMs = total;
+  var b = curBlock();
+  if (!b || b.type !== 'focus') return 0;
+  session.actualMs = session.actualMs || {};
+  var run = b.runMs || 0;
+  if (b.runStart) run += Math.max(0, now() - b.runStart);
+  var delta = Math.max(0, run - (b.bankedMs || 0));
+  if (delta > 0) {
+    session.actualMs[b.taskId] = (session.actualMs[b.taskId] || 0) + delta;
+    session.focusMs = (session.focusMs || 0) + delta;
+  }
+  if (run > (session.longestMs || 0)) session.longestMs = run;
+  b.bankedMs = run;
+  return delta;
+}
+
+/* A focus block only counts as completed when it actually ran its full length. */
+export function markBlockDone() {
+  var session = getSession();
+  var b = curBlock();
+  if (!session || !b || b.type !== 'focus') return;
+  if (b.counted) return;
+  session.taskBlocksTotal = session.taskBlocksTotal || {};
+  session.taskBlocksDone = session.taskBlocksDone || {};
+  session.done = session.done || {};
+  var planned = (b.plannedMin || b.min) * 60000;
+  var run = b.bankedMs || 0;
+  if (run < planned * 0.9) return;
+  b.counted = true;
+  session.blocksDone = (session.blocksDone || 0) + 1;
+  session.taskBlocksDone[b.taskId] = (session.taskBlocksDone[b.taskId] || 0) + 1;
+  var total = session.taskBlocksTotal[b.taskId] || 0;
+  session.done[b.taskId] = (session.taskBlocksDone[b.taskId] || 0) >= total;
 }
 
 export function prune() {
@@ -290,11 +352,9 @@ export function decide(kind, min, auto) {
   var b = curBlock();
   if (kind === 'done') {
     hideDecision(); session.awaiting = false;
-    session.done[b.taskId] = true;
+    // Done closes THIS block only — every other planned block still runs.
+    markBlockDone();
     if (!auto) speak(b.name + ' done. Nice.', { interrupt: true });
-    session.blocks = session.blocks.filter(function (x, i) {
-      return i <= session.idx || !(x.type === 'focus' && x.taskId === b.taskId);
-    });
     prune();
     advance();
   } else {

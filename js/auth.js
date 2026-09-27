@@ -5,6 +5,7 @@ import { LS } from './utils.js';
 
 var _user = null;
 var _listeners = [];
+var _watching = false;
 
 export { isConfigured };
 
@@ -21,25 +22,63 @@ export async function initAuth() {
     var res = await sb.auth.getSession();
     _user = res.data.session ? res.data.session.user : null;
   } catch (e) { _user = null; }
-  sb.auth.onAuthStateChange(function (event, session) {
-    _user = session ? session.user : null;
-    LS.set('account', _user ? { email: _user.email, status: 'active', savedAt: Date.now() } : null);
-    notify();
-  });
+  if (!_watching) {
+    _watching = true;
+    sb.auth.onAuthStateChange(function (event, session) {
+      _user = session ? session.user : null;
+      LS.set('account', _user ? { email: _user.email, status: 'active', savedAt: Date.now() } : null);
+      notify();
+    });
+  }
   return _user;
 }
 
+// Re-read the session after the user clicks their confirmation link.
+export async function refreshSession() {
+  var sb = getClient();
+  if (!sb) return null;
+  try {
+    var res = await sb.auth.getSession();
+    _user = res.data.session ? res.data.session.user : null;
+  } catch (e) { _user = null; }
+  if (_user) {
+    LS.set('account', { email: _user.email, status: 'active', savedAt: Date.now() });
+  }
+  notify();
+  return _user;
+}
+
+/* Password signup. When the project requires email confirmation Supabase
+   returns no session, so we report needsConfirm and let the UI ask the user to
+   check their inbox. A brand-new account is the only path to a congratulations
+   page — Supabase returns an identity-less user for an email that exists. */
 export async function signUp(email, password) {
   var sb = getClient();
   if (!sb) return { error: 'Supabase not configured' };
   try {
     var res = await sb.auth.signUp({ email: email, password: password });
     if (res.error) return { error: res.error.message };
-    _user = res.data.user;
-    LS.set('account', { email: email, status: 'active', savedAt: Date.now() });
-    notify();
-    return { user: res.data.user };
+    var user = res.data.user || null;
+    if (res.data.session) {
+      _user = user;
+      LS.set('account', { email: email, status: 'active', savedAt: Date.now() });
+      notify();
+      return { user: user, needsConfirm: false };
+    }
+    var identities = (user && user.identities) || [];
+    if (!identities.length) return { error: 'That email already has an account. Log in instead.' };
+    return { user: user, needsConfirm: true, email: email };
   } catch (e) { return { error: e.message || 'Signup failed' }; }
+}
+
+export async function resendConfirmation(email) {
+  var sb = getClient();
+  if (!sb) return { error: 'Supabase not configured' };
+  try {
+    var res = await sb.auth.resend({ type: 'signup', email: email });
+    if (res.error) return { error: res.error.message };
+    return { ok: true };
+  } catch (e) { return { error: e.message || 'Could not resend the email' }; }
 }
 
 export async function signIn(email, password) {
@@ -77,14 +116,24 @@ export async function updateProfile(data) {
   } catch (e) { return { error: e.message || 'Update failed' }; }
 }
 
-export async function changePassword(newPw) {
+/* Password change. Supabase needs a fresh session for credential updates, so the
+   current password is verified first. */
+export async function changePassword(currentPw, newPw) {
   var sb = getClient();
   if (!sb || !_user) return { error: 'Not signed in' };
+  if (!newPw || String(newPw).length < 6) return { error: 'New password must be at least 6 characters.' };
   try {
+    if (currentPw) {
+      var re = await sb.auth.signInWithPassword({ email: _user.email, password: currentPw });
+      if (re.error) return { error: 'That current password is not right.' };
+      _user = re.data.user || _user;
+    }
     var res = await sb.auth.updateUser({ password: newPw });
     if (res.error) return { error: res.error.message };
+    _user = res.data.user || _user;
+    notify();
     return { ok: true };
-  } catch (e) { return { error: e.message || 'Update failed' }; }
+  } catch (e) { return { error: e.message || 'Password update failed' }; }
 }
 
 export async function deleteAccount() {

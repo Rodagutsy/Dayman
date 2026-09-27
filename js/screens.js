@@ -1,6 +1,6 @@
 /* Dayman — all screen rendering, shared UI helpers, buildBlocks. */
 
-import { $, $$, LS, now, today, prettyDate, human, clockOf, uid } from './utils.js';
+import { $, $$, LS, now, today, prettyDate, human, clockOf, uid, titleCase } from './utils.js';
 import { plan, getSession, setSession, history, averages } from './state.js';
 import { parseTasks, durationHint, cleanName } from './parsing.js';
 import { speak } from './speech.js';
@@ -69,7 +69,7 @@ function statRow(items) {
 
 function sec(title) {
   var s = document.createElement('div'); s.className = 'psec';
-  if (title) { var h = document.createElement('h3'); h.textContent = title; s.appendChild(h); }
+  if (title) { var h = document.createElement('h3'); h.textContent = titleCase(title); s.appendChild(h); }
   return s;
 }
 
@@ -91,14 +91,14 @@ function observation(rec) {
     if (!worst || d > worst.d) worst = { t: t, d: d };
   });
   if (worst && worst.d >= 5) {
-    lines.push(worst.t.name + ' took ~' + worst.t.actual + ' min — you planned ' + worst.t.planned + '. Try ' + (Math.ceil(worst.t.actual / 5) * 5) + ' next time.');
+    lines.push(titleCase(worst.t.name) + ' took ~' + worst.t.actual + ' min — you planned ' + worst.t.planned + '. Try ' + (Math.ceil(worst.t.actual / 5) * 5) + ' next time.');
   } else if (rec.focus === 0) {
     lines.push('No focused time today — shorter blocks might help tomorrow.');
   } else {
     lines.push('You landed close to plan — ' + human(rec.focus) + ' focused with ' + rec.ext + ' overrun' + (rec.ext === 1 ? '' : 's') + '. Keep the same block size.');
   }
   var skipped = rec.tasks.filter(function (t) { return !t.actual; });
-  if (skipped.length) lines.push('Skipped: ' + skipped.map(function (t) { return t.name; }).join(', ') + '.');
+  if (skipped.length) lines.push('Skipped: ' + skipped.map(function (t) { return titleCase(t.name); }).join(', ') + '.');
   return lines.join(' ');
 }
 
@@ -123,7 +123,7 @@ export function refreshHints() {
     seen[k] = 1;
     var c = document.createElement('span');
     c.className = 'hint-chip';
-    c.textContent = 'you usually need ~' + avg[k].avg + ' min for "' + avg[k].name + '"';
+    c.textContent = 'you usually need ~' + avg[k].avg + ' min for "' + titleCase(avg[k].name) + '"';
     box.appendChild(c);
   });
 }
@@ -143,13 +143,35 @@ export function buildTasksFromInput() {
   });
 }
 
+// How many break minutes sit inside `focusMin` of focus time for this technique.
+export function breakReserve(focusMin, tech) {
+  tech = tech || currentTech();
+  if (tech.brk <= 0 && !tech.longEvery) return 0;
+  var blocks = Math.max(1, Math.ceil(Math.max(0, focusMin) / tech.focus));
+  var breaks = Math.max(0, blocks - 1);
+  var longEvery = tech.longEvery || 0;
+  if (!longEvery) return breaks * tech.brk;
+  var longs = Math.floor(breaks / longEvery);
+  return (breaks - longs) * tech.brk + longs * tech.longBrk;
+}
+
 export function allocate() {
+  var tech = currentTech();
   var pool = plan.budget;
   var fixed = 0, free = [];
   plan.tasks.forEach(function (t) {
     if (t.hinted && t.alloc > 0) fixed += t.alloc; else free.push(t);
   });
-  var rest = Math.max(0, pool - fixed);
+  // Breaks live INSIDE the budget. Reserving breaks for the whole budget
+  // over-reserves (long breaks only happen every Nth block), so settle on the
+  // focus/break split by iterating until it stops moving.
+  var focusPool = pool, guard = 0;
+  while (guard++ < 12) {
+    var next = Math.max(5, pool - breakReserve(focusPool, tech));
+    if (next === focusPool) break;
+    focusPool = next;
+  }
+  var rest = Math.max(0, focusPool - fixed);
   if (free.length) {
     var per = Math.max(5, Math.round((rest / free.length) / 5) * 5);
     free.forEach(function (t) { t.alloc = per; });
@@ -161,6 +183,73 @@ export function planTotal() {
 }
 
 // ================================================================ SCHEDULE
+function blocksTotal(blocks) {
+  return blocks.reduce(function (s, b) { return s + b.min; }, 0);
+}
+
+function lastShrinkable(blocks) {
+  // Focus first: trim the last focus block that is still above the 5 min floor.
+  for (var k = blocks.length - 1; k >= 0; k--) {
+    var b = blocks[k];
+    if (b.type === 'focus' && b.min > 5) return k;
+  }
+  // Only once no focus block can give anything back do we touch breaks.
+  for (var j = blocks.length - 1; j >= 0; j--) {
+    if (blocks[j].type === 'break' && blocks[j].min > 0) return j;
+  }
+  return -1;
+}
+
+/* Fit the block list so focus + breaks land exactly on the budget: shrink the
+   last focus blocks first, then breaks; any slack goes to the last focus block. */
+export function fitToBudget(blocks, budget) {
+  budget = Math.max(5, budget || 0);
+  var guard = 0;
+  while (blocksTotal(blocks) > budget && guard++ < 600) {
+    var over = blocksTotal(blocks) - budget;
+    var i = lastShrinkable(blocks);
+    if (i < 0) break;
+    var b = blocks[i];
+    var floor = b.type === 'focus' ? 5 : 0;
+    b.min = Math.max(floor, b.min - over);
+    if (b.type === 'focus') b.plannedMin = b.min;
+  }
+  blocks = blocks.filter(function (b) { return b.min > 0; });
+  var out = [];
+  blocks.forEach(function (b) {
+    var prev = out[out.length - 1];
+    if (b.type === 'break' && (!prev || prev.type === 'break')) return;
+    out.push(b);
+  });
+  while (out.length && out[out.length - 1].type === 'break') out.pop();
+  // Any slack is spread over the trailing focus blocks in 5 min steps so a long
+  // day never ends in one absurd mega-block.
+  var slack = budget - blocksTotal(out);
+  if (slack > 0) {
+    var focusIdx = [];
+    out.forEach(function (b, i) { if (b.type === 'focus') focusIdx.push(i); });
+    var pass = 0;
+    while (slack >= 5 && focusIdx.length && pass < 400) {
+      for (var j = focusIdx.length - 1; j >= 0 && slack >= 5; j--) {
+        out[focusIdx[j]].min += 5;
+        out[focusIdx[j]].plannedMin = out[focusIdx[j]].min;
+        slack -= 5;
+      }
+      pass++;
+    }
+    // Sub-5 minute remainder (custom break lengths) goes on the last focus
+    // block so the day still lands exactly on the budget.
+    if (slack > 0) {
+      for (var k = focusIdx.length - 1; k >= 0; k--) {
+        out[focusIdx[k]].min += slack;
+        out[focusIdx[k]].plannedMin = out[focusIdx[k]].min;
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 export function buildBlocks() {
   var tech = currentTech();
   var blocks = [], focusCount = 0;
@@ -170,19 +259,63 @@ export function buildBlocks() {
       var len = Math.min(tech.focus, left);
       if (left - len > 0 && left - len < 5) len = left;
       left -= len; part++;
-      blocks.push({ type: 'focus', taskId: t.id, name: t.name, min: len, part: part, parts: total });
+      blocks.push({ type: 'focus', taskId: t.id, name: t.name, min: len, plannedMin: len, part: part, parts: total });
       focusCount++;
       var lastOverall = (ti === plan.tasks.length - 1) && left <= 0;
       if (!lastOverall && tech.brk > 0) {
         var isLong = tech.longEvery && focusCount % tech.longEvery === 0;
-        blocks.push({ type: 'break', name: isLong ? 'Long break' : 'Break', min: isLong ? tech.longBrk : tech.brk, long: !!isLong });
+        blocks.push({ type: 'break', name: isLong ? 'Long Break' : 'Break', min: isLong ? tech.longBrk : tech.brk, long: !!isLong });
       }
     }
   });
-  return blocks;
+  return fitToBudget(blocks, plan.budget);
 }
 
-export function renderSchedule() {
+export function blockMinutes(blocks) {
+  var focus = 0, brk = 0;
+  (blocks || []).forEach(function (b) {
+    if (b.type === 'focus') focus += b.min; else brk += b.min;
+  });
+  return { focus: focus, brk: brk, total: focus + brk };
+}
+
+/* Randomised order — the user can reshuffle instead of taking our ordering. */
+export function shuffleTasks() {
+  if (plan.tasks.length < 2) return false;
+  for (var i = plan.tasks.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = plan.tasks[i]; plan.tasks[i] = plan.tasks[j]; plan.tasks[j] = tmp;
+  }
+  return true;
+}
+
+export function cancelPlan() {
+  plan.tasks = [];
+  LS.set('draft', { plan: { budget: plan.budget, tech: plan.tech }, tech: plan.tech });
+  LS.set('lastInput', '');
+  var ti = $('#tasks-input');
+  if (ti) ti.value = '';
+}
+
+// Shared disclosure: header always visible, body collapsed until tapped.
+function wireDisclose(rootSel) {
+  var wrap = $(rootSel);
+  if (!wrap) return null;
+  var head = $('.disclose-head', wrap);
+  if (!head || head._wired) return wrap;
+  head._wired = true;
+  head.addEventListener('click', function () {
+    var open = wrap.classList.toggle('open');
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  wrap.setOpen = function (v) {
+    wrap.classList.toggle('open', !!v);
+    head.setAttribute('aria-expanded', v ? 'true' : 'false');
+  };
+  return wrap;
+}
+
+export function renderSchedule(resetCollapse) {
   var ed = $('#task-editor'); ed.innerHTML = '';
   plan.tasks.forEach(function (t, i) {
     var row = document.createElement('div'); row.className = 'trow';
@@ -201,7 +334,9 @@ export function renderSchedule() {
       '</div>';
     $('.tname', row).value = t.name;
     $('.tname', row).addEventListener('change', function (e) {
-      t.name = e.target.value.trim() || t.name; renderSchedule();
+      var v = titleCase(e.target.value.trim());
+      t.name = v || t.name;
+      renderSchedule();
     });
     $$('.iconbtn', row).forEach(function (b) {
       b.addEventListener('click', function () {
@@ -218,6 +353,8 @@ export function renderSchedule() {
     ed.appendChild(row);
   });
 
+  var blocks = buildBlocks();
+  var mins = blockMinutes(blocks);
   var used = planTotal(), tot = plan.budget;
   $('#budget-used').textContent = human(used) + ' planned';
   $('#budget-total').textContent = 'budget ' + human(tot);
@@ -225,25 +362,35 @@ export function renderSchedule() {
   var fill = $('#budget-fill'); fill.style.width = pct + '%';
   fill.classList.toggle('over', used > tot);
   var w = $('#budget-warn');
+  var slack = tot - used - mins.brk; // breaks are already accounted for
   if (used > tot) {
-    w.textContent = human(used - tot) + ' over your ' + human(tot) + ' budget. Trim a task or accept a longer day.';
+    w.textContent = 'Your tasks add up to ' + human(used - tot) + ' over your ' + human(tot) +
+      ' budget, so the day is trimmed to fit. Trim a task to keep the whole plan.';
     w.classList.remove('hidden'); w.classList.remove('info');
-  } else if (tot - used >= 10) {
-    w.textContent = human(tot - used) + ' of your budget is unassigned — add a task or give one more time.';
+  } else if (slack >= 30 && plan.tasks.length) {
+    w.textContent = 'You have ' + human(slack) + ' of spare time today — add a task or give one more time.';
     w.classList.remove('hidden'); w.classList.add('info');
   } else w.classList.add('hidden');
 
-  var blocks = buildBlocks(), tl = $('#timeline'); tl.innerHTML = '';
+  var note = $('#budget-note');
+  if (note) {
+    note.innerHTML = mins.brk > 0
+      ? 'Breaks sit inside your budget: <strong>' + human(mins.focus) + ' focus</strong> + <strong>' +
+        human(mins.brk) + ' break' + (mins.brk === 1 ? '' : 's') + '</strong> = ' + human(mins.total) + '.'
+      : 'No breaks scheduled — all <strong>' + human(mins.total) + '</strong> is focus time.';
+  }
+
+  var tl = $('#timeline .dh-inner'); tl.innerHTML = '';
   if (!blocks.length) { tl.innerHTML = '<p class="empty">Add some tasks to see your timeline.</p>'; }
-  var cursor = now(), fi = 0, fcount = blocks.filter(function (b) { return b.type === 'focus'; }).length;
+  var cursor = now(), fcount = 0;
   blocks.forEach(function (b) {
     var end = cursor + b.min * 60000;
     var row = document.createElement('div');
     row.className = 'tl-row' + (b.type === 'break' ? ' brk' : '');
     var label = b.type === 'focus'
-      ? b.name + (b.parts > 1 ? ' (' + b.part + '/' + b.parts + ')' : '')
-      : b.name;
-    if (b.type === 'focus') fi++;
+      ? titleCase(b.name) + (b.parts > 1 ? ' (' + b.part + '/' + b.parts + ')' : '')
+      : titleCase(b.name);
+    if (b.type === 'focus') fcount++;
     row.innerHTML = '<div class="tl-main"><span class="tl-name"></span>' +
       '<span class="tl-len">' + b.min + 'm</span></div>' +
       '<div class="tl-time">' + clockOf(cursor) + ' – ' + clockOf(end) + '</div>';
@@ -253,43 +400,120 @@ export function renderSchedule() {
   });
   if (blocks.length) {
     var f = document.createElement('p'); f.className = 'empty';
-    f.textContent = fcount + ' focus blocks · finishes around ' + clockOf(cursor);
+    f.textContent = fcount + ' focus block' + (fcount === 1 ? '' : 's') + ' · finishes around ' + clockOf(cursor);
     tl.appendChild(f);
+  }
+  var dl = wireDisclose('#timeline-disclose');
+  if (dl && dl.setOpen) {
+    if (resetCollapse) dl.setOpen(false);
+    var sum = $('#timeline-summary');
+    if (sum) sum.textContent = blocks.length
+      ? fcount + ' focus block' + (fcount === 1 ? '' : 's') + ' · ends around ' + clockOf(cursor)
+      : 'No blocks yet';
   }
   LS.set('draft', { plan: plan, tech: plan.tech });
 }
 
+// Previous plan on the home screen: one collapsed line, expandable.
+export function renderLastPlan() {
+  var slot = $('#last-plan-slot');
+  if (!slot) return;
+  var h = history();
+  var dates = Object.keys(h).sort();
+  var date = dates.length ? dates[dates.length - 1] : null;
+  var rec = date ? h[date] : null;
+  if (!rec || !rec.tasks || !rec.tasks.length) { slot.innerHTML = ''; return; }
+  var count = rec.tasks.length;
+  var planned = rec.tasks.reduce(function (s, t) { return s + (t.planned || 0); }, 0);
+  var summary = count + ' task' + (count === 1 ? '' : 's') + ' · ' + human(rec.focus || 0) +
+    ' focused · ' + prettyDate(date);
+  slot.innerHTML =
+    '<div class="disclose plan-prev" id="last-plan">' +
+      '<button class="disclose-head" type="button" aria-expanded="false" aria-controls="last-plan-body">' +
+        '<span class="dh-text">' +
+          '<span class="dh-title">Last Plan</span>' +
+          '<span class="dh-sub">' + summary + '</span>' +
+        '</span>' +
+        '<span class="dh-caret" aria-hidden="true">&#x25BC;</span>' +
+      '</button>' +
+      '<div class="disclose-body" id="last-plan-body">' +
+        '<ul class="plan-prev-list">' +
+          rec.tasks.map(function (t) {
+            return '<li><span>' + titleCase(t.name || '') + '</span><span>' +
+              (t.actual || 0) + 'm / ' + (t.planned || 0) + 'm</span></li>';
+          }).join('') +
+        '</ul>' +
+        '<p class="empty">' + human(planned) + ' planned' + (rec.sessions > 1 ? ' · ' + rec.sessions + ' sessions' : '') + '</p>' +
+      '</div>' +
+    '</div>';
+  var wrap = wireDisclose('#last-plan');
+  if (wrap && wrap.setOpen) wrap.setOpen(false);
+}
+
 // ================================================================ RECAP
-export function finishDay() {
+export function finishDay(opts) {
   var session = getSession();
   if (!session || session.finished) return;
+  var cancelled = !!(opts && opts.cancelled);
   session.finished = true;
   stopTick();
   releaseWakeLock();
   session.done = session.done || {};
-  var rec = {
-    date: session.date, tasks: [], focus: 0, ext: 0,
-    startHour: typeof session.startHour === 'number' ? session.startHour : new Date(session.startedAt || now()).getHours(),
-    longest: Math.round((session.longestMs || 0) / 60000)
-  };
+
+  var date = session.date;
+  var h = history();
+  var isNewDay = !h[date];
+  var startHour = typeof session.startHour === 'number' ? session.startHour
+    : new Date(session.startedAt || now()).getHours();
+  var rec = isNewDay ? {
+    date: date, tasks: [], focus: 0, ext: 0, longest: 0,
+    startHour: startHour, sessions: 0, blocksDone: 0
+  } : h[date];
+  rec.tasks = rec.tasks || [];
+  rec.focus = rec.focus || 0;
+  rec.ext = rec.ext || 0;
+  rec.longest = rec.longest || 0;
+  rec.sessions = rec.sessions || 0;
+  rec.blocksDone = rec.blocksDone || 0;
+
+  var sessionExt = 0;
   Object.keys(session.planned).forEach(function (id) {
-    rec.tasks.push({
+    var entry = {
       name: session.names[id],
       planned: session.planned[id],
       actual: Math.round((session.actualMs[id] || 0) / 60000),
       ext: session.ext[id] || 0,
       done: !!session.done[id]
-    });
-    rec.focus += Math.round((session.actualMs[id] || 0) / 60000);
-    rec.ext += session.ext[id] || 0;
+    };
+    sessionExt += entry.ext;
+    var same = null;
+    for (var i = 0; i < rec.tasks.length; i++) {
+      if (rec.tasks[i].name === entry.name) { same = rec.tasks[i]; break; }
+    }
+    if (same) {
+      same.planned = (same.planned || 0) + entry.planned;
+      same.actual = (same.actual || 0) + entry.actual;
+      same.ext = (same.ext || 0) + entry.ext;
+      same.done = !!same.done || entry.done;
+    } else {
+      rec.tasks.push(entry);
+    }
   });
-  var h = history(); h[rec.date] = rec; LS.set('history', h);
+  rec.focus += Math.round((session.focusMs || 0) / 60000);
+  rec.ext += sessionExt;
+  rec.longest = Math.max(rec.longest, Math.round((session.longestMs || 0) / 60000));
+  rec.startHour = isNewDay ? startHour : Math.min(rec.startHour == null ? startHour : rec.startHour, startHour);
+  rec.sessions += 1;
+  rec.blocksDone += (session.blocksDone || 0);
+  if (cancelled) rec.cancelled = true;
+  h[date] = rec;
+  LS.set('history', h);
   LS.set('session', null);
   syncUp(); // sync to cloud after completing a day
   syncLeaderboard(); // sync weekly score to leaderboard
-  var gain = xpForDay(rec, streakOf(h, rec.date));
+  var gain = xpForDay(rec, streakOf(h, date));
   var unlocks = checkUnlocks();
-  renderRecap(rec, gain, unlocks);
+  renderRecap(rec, gain, unlocks, cancelled);
   hideScanlines();
   show('recap');
   allDone();
@@ -300,17 +524,21 @@ export function finishDay() {
     setTimeout(function () { levelUp(); levelUpFlash('Level ' + curLevel.level + '!'); }, 1200);
   }
   var c = dayCounts(rec);
-  var line = 'That\'s the day. ' + human(rec.focus) + ' of focused work, ' + c.completed +
-    ' of ' + c.planned + ' tasks done, plus ' + gain.total + ' XP.';
+  var line = cancelled
+    ? 'Plan cancelled. ' + human(rec.focus) + ' of focused work is saved — pick it up again when you are ready.'
+    : 'That\'s the day. ' + human(rec.focus) + ' of focused work, ' + c.completed +
+      ' of ' + c.planned + ' tasks done, plus ' + gain.total + ' XP.';
   if (unlocks.length) line += ' New badge: ' + unlocks[0].name + '.';
   speak(line, { interrupt: true });
 }
 
-function renderRecap(rec, gain, unlocks) {
+function renderRecap(rec, gain, unlocks, cancelled) {
   var h = history();
   gain = gain || xpForDay(rec, streakOf(h, rec.date));
   unlocks = unlocks || [];
   var c = dayCounts(rec);
+  var recapTitle = $('#screen-recap .top-title');
+  if (recapTitle) recapTitle.textContent = cancelled ? 'Plan Cancelled' : 'Recap';
   $('#r-focus').textContent = human(rec.focus);
   $('#r-ext').textContent = rec.ext;
   $('#r-tasks').textContent = c.completed + '/' + c.planned;
@@ -358,7 +586,7 @@ function renderRecap(rec, gain, unlocks) {
       '<span>+' + t.ext + 'm</span></div>' +
       '<div class="bar"><span class="plan" style="width:' + (t.planned / max * 100) + '%"></span>' +
       '<span class="act" style="width:' + (Math.min(t.actual, max) / max * 100) + '%"></span></div>';
-    $('.rn', el).textContent = t.name;
+    $('.rn', el).textContent = titleCase(t.name || '');
     box.appendChild(el);
   });
   $('#recap-obs').textContent = observation(rec);
@@ -765,11 +993,11 @@ export function renderHistory() {
   var A = $('#hist-averages'); A.innerHTML = '';
   if (keys.length) {
     var g = document.createElement('div'); g.className = 'hgroup';
-    g.innerHTML = '<h3>Your usual pace</h3>';
+    g.innerHTML = '<h3>Your Usual Pace</h3>';
     keys.forEach(function (k) {
       var l = document.createElement('div'); l.className = 'hline';
       l.innerHTML = '<span></span><span>~' + avg[k].avg + ' min · ' + avg[k].n + 'x</span>';
-      $('span', l).textContent = avg[k].name;
+      $('span', l).textContent = titleCase(avg[k].name);
       g.appendChild(l);
     });
     A.appendChild(g);
@@ -779,11 +1007,14 @@ export function renderHistory() {
   var D = $('#hist-days'); D.innerHTML = '';
   dates.forEach(function (d) {
     var r = h[d], g = document.createElement('div'); g.className = 'hgroup';
-    g.innerHTML = '<h3>' + prettyDate(d) + ' · ' + human(r.focus) + ' focused · +' + r.ext + 'm</h3>';
+    g.innerHTML = '<h3></h3><p class="hsub"></p>';
+    $('h3', g).textContent = titleCase(prettyDate(d));
+    $('.hsub', g).textContent = human(r.focus) + ' focused · +' + r.ext + 'm' +
+      (r.sessions > 1 ? ' · ' + r.sessions + ' sessions' : '') + (r.cancelled ? ' · cancelled' : '');
     (r.tasks || []).forEach(function (t) {
       var l = document.createElement('div'); l.className = 'hline';
       l.innerHTML = '<span></span><span>' + t.actual + 'm / ' + t.planned + 'm</span>';
-      $('span', l).textContent = t.name;
+      $('span', l).textContent = titleCase(t.name);
       g.appendChild(l);
     });
     D.appendChild(g);
