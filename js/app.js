@@ -23,7 +23,6 @@ import {
   deleteAccount, changePassword, resendConfirmation
 } from './auth.js';
 import { syncUp, syncDown, exportData } from './sync.js';
-import { initInstall } from './install.js';
 import { displayName, avatarInitial, setDisplayName, onIdentityChange, ensureIdentity, resetIdentity } from './identity.js';
 import { titleCase } from './utils.js';
 
@@ -793,7 +792,6 @@ onIdentityChange(function () {
     initPlan();
     await initAuth().catch(function () {});
     await ensureIdentity();
-    initInstall();
     if (!onboarded) {
       initOnboarding();
     } else {
@@ -808,7 +806,6 @@ onIdentityChange(function () {
     if (splashEl) splashEl.style.display = 'none';
     initPlan();
     ensureIdentity();
-    initInstall();
   } else {
     runSplash(function () {
       afterSplash();
